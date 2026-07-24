@@ -155,3 +155,48 @@ npm run build
 - Missing external API keys do not break demo.
 - Audit log records agent, action, evidence refs, and review gates.
 - CI exists and uses the same commands expected before merge.
+
+## Completion Notes (2026-07-24)
+
+### What was completed
+
+- Next.js 16 scaffold (no scaffold existed on `main`; this branch merges first, so it carries `package.json`, tsconfig, ESLint flat config, Vitest, and a placeholder `src/app` shell for Person A to replace).
+- `src/contracts/index.ts`: frozen contracts from `docs/CONTRACTS.md`, with the referenced-but-undefined types (`Assignment`, `ConceptSummary`, `AssignmentVariant`, `AssessmentResult`, `LessonPlan`, `ReviewItem`, `SupportId`, `MisconceptionId`, `RoomId`) filled in minimally plus a Zod schema for `AgentEvent`.
+- `src/server/events`: in-memory bus with `publishEvent` / `subscribeToRun` / `getRunEvents` (exact contract API) plus `createEvent` / `emitEvent` helpers B and C should use. State survives dev-server module reloads via a `globalThis` cache.
+- `GET /api/runs/:runId/events`: SSE (`event: agent-event`) with full history replay before live streaming, 15s keepalive comments, and unsubscribe on client abort. `?format=json` (or `Accept: application/json`) returns plain event history.
+- `POST /api/runs/:runId/events`: mock-mode-only event injector so Person A can drive world animations before the agent loop merges. Returns 403 when `SPONSOR_MODE=live`.
+- `src/server/audit`: audit log recording actor (agent/system/professor), action, evidence refs, review-gate flag.
+- `src/server/adapters`: Guild, Band, Actian, Model, Replay interfaces + mock implementations; `getAdapters()` factory singleton; `getAdapterStatus()` for debugging.
+- `src/server/config`: `SPONSOR_MODE=mock` default; `resolveAdapterMode` returns live only when mode is live AND keys are present, otherwise mock with a one-time warning.
+- CI at `.github/workflows/ci.yml`: `npm ci`, lint, typecheck, `test -- --run`, build on Node 24.
+- 33 Vitest tests across bus, config, audit, adapters, and the SSE route.
+
+### What was intentionally mocked
+
+- All five sponsor adapters. No live implementations exist; in live mode every adapter falls back to mock (with a warning) even when keys are present. Swapping in a real adapter is one line in `src/server/adapters/index.ts#buildAdapters`.
+- Model adapter returns deterministic fixtures per task; B/C can override per-task output with `model.setMockResponse(task, output)` using seed-derived data.
+
+### Known risks
+
+- Event bus and stores are in-memory and per-process: fine for one local dev/prod server, not for serverless multi-instance deploys. For Vercel-style deploys the SSE route and run loop must share one process, or the bus needs a real backend.
+- Contracts referenced-but-undefined types were defined by Person D; B and C should review before treating them as frozen.
+
+### How to demo this branch
+
+```bash
+npm run dev
+# terminal 1: stream
+curl -N http://localhost:3000/api/runs/run_demo/events
+# terminal 2: inject an event (mock mode only)
+curl -X POST http://localhost:3000/api/runs/run_demo/events \
+  -H 'Content-Type: application/json' \
+  -d '{"event_type":"assignment.uploaded","source_agent":"assignment_architect","payload":{}}'
+```
+
+### Interfaces for B and C
+
+```ts
+import { emitEvent } from "@/server/events";          // publish agent events
+import { recordAudit } from "@/server/audit";          // audit trail + review gates
+import { getAdapters } from "@/server/adapters";       // { guild, band, actian, model, replay }
+```
