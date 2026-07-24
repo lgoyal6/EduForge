@@ -82,7 +82,7 @@ const t1 = await page.evaluate(() => window.__eduforge.state().elapsed);
 console.log(`advanceTime(3000): elapsed ${t0.toFixed(2)} -> ${t1.toFixed(2)}`);
 
 // 5. Run classroom simulation.
-const simButton = page.getByRole("button", { name: "Run classroom simulation" });
+const simButton = page.getByRole("button", { name: "Run classroom" });
 await simButton.waitFor({ state: "visible" });
 for (let i = 0; i < 60 && await simButton.isDisabled(); i++) await page.waitForTimeout(500);
 if (await simButton.isDisabled()) { errors.push("simulate button never enabled"); }

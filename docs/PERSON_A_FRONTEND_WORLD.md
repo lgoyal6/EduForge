@@ -259,3 +259,87 @@ another owner's work; all of it is new:
   treat this as the frozen contract module and raise changes with the team.
 - `scripts/verify-world.mjs` — the browser check described above.
 - `README.md` — added a "Running the app" section.
+
+---
+
+## Design Pass: Minecraft Interface Language
+
+The first build wrapped a pixel-art world in a generic dark dashboard, so the
+chrome and the canvas read as two different products. This pass rebuilds the UI
+in the same vocabulary as the world.
+
+### References
+
+`refero_search_styles` and `mobbin.search_screens` were both searched for
+Minecraft UI. Neither library carries it — Minecraft's interface is not a
+product-design pattern, so it is absent from screen libraries. What they did
+return was useful for the adjacent problem of game UI inside a product:
+
+- [Mercury — in-app arcade game screen](https://mobbin.com/screens/9105331f-214a-4734-a40c-7fac714ae096),
+  the closest match: pixel type and bordered option cards sitting inside an
+  otherwise conventional product shell.
+- [Relevance AI — isometric pixel room](https://mobbin.com/screens/c200f5d9-67c3-4302-94ee-86d592b7df24),
+  confirming an isometric pixel scene can anchor a working tool.
+- Refero: [FRANKY'S](https://frankys-hats.com) for 8-bit commerce chrome and
+  [Playdate](https://play.date) for blocky, flat, hard-edged surfaces.
+
+The interface language itself is taken from Minecraft's actual GUI conventions
+rather than from a library screenshot.
+
+### The system
+
+**Color.** Neutrals carry a blue-violet bias so the chrome belongs to the night
+world on the canvas instead of sitting on it as neutral grey:
+`--void #0b0d14`, `--stone #26262f`, `--stone-hi #4d4d5e`, `--slot #15151c`.
+One accent, `--gold #ffc64d`, drawn from Minecraft's gold text color; it had to
+be a hue the four room colors do not already occupy. Semantic color is separate:
+`--xp #7be04a`, `--warn #ffc64d`, `--danger #ff6b5b`.
+
+**Type.** Two pixel faces, inlined as data URIs in `src/app/fonts.css` (both SIL
+OFL, latin subset, ~21 KB total): **Press Start 2P** for headings and buttons,
+**Silkscreen** for labels, counts and chips. Body prose stays in a system sans.
+That last part is the deliberate deviation — Minecraft uses one font for
+everything, but this UI carries agent rationale and misconception narratives,
+and readability wins over purity where the content is long. The fonts are
+embedded rather than linked so a blocked CDN cannot silently fall back to a
+non-pixel face mid-demo.
+
+**Surfaces.** Every raised plate has a light top/left and dark bottom/right
+bevel; wells invert it. Nothing has a border radius. Buttons sink their bevel on
+`:active` rather than fading opacity.
+
+### What changed functionally
+
+- **The phase timeline became a hotbar.** Eleven inventory slots, one per
+  contract event, each with a tooltip naming what that stage does. Discrete
+  cells make progress countable at a glance, and keys `1`–`9` jump to a stage.
+- **Advancement toasts.** Events that fire while you are watching the world were
+  previously only recorded in the feed, off to the side — the thing the demo most
+  wants you to notice was the thing you were most likely to miss. Capped at two,
+  anchored bottom-right (not Minecraft's top-right, because the command rail
+  lives there and covering the controls is worse than being off-canon).
+- **Segmented meters.** Mastery reads as twenty XP notches instead of a smooth
+  fill, so two students differing by one step are distinguishable.
+- **Keyboard control.** `Enter` runs the next step, `R` resets, `Esc` clears the
+  selection, `1`–`9` select a stage. Ignored while typing in the editor.
+- **The primary action is never ambiguous.** Whichever of Start run / Run
+  classroom is available pulses gold; the other is visibly dead.
+- **Accessibility.** Real `:focus-visible` rings, `prefers-reduced-motion`
+  support, `role="meter"` on mastery bars, and descriptive `aria-label`s on
+  hotbar slots — none of which existed before.
+- `summarizeEvent` was extracted to `src/world/eventSummary.ts` so the feed and
+  the toasts cannot describe the same event two different ways.
+
+### Bugs this pass found and fixed
+
+1. A tooltip on a *disabled* button stayed open after the button was clicked and
+   then disabled, floating over the layout with no way to dismiss it. Tips are
+   now suppressed on `:disabled` / `aria-disabled`.
+2. Toasts were covering the command rail. Moved to bottom-right.
+3. Toast copy was reusing the hotbar's short labels ("Tomorrow", "Review")
+   instead of sentences. Now uses the shared event summary.
+4. **Mobile horizontal overflow (390 → 493px).** The cause was not layout:
+   `[data-tip]::after` boxes existed at `opacity: 0` with `white-space: nowrap`,
+   and an invisible element still contributes to the document's scroll area.
+   `getBoundingClientRect` on every element reported no offender, which is what
+   pointed at pseudo-elements. Tips are now generated only on `:hover`.

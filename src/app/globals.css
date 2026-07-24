@@ -1,22 +1,93 @@
+@import "./fonts.css";
+
+/**
+ * EduForge UI — Minecraft-derived interface language.
+ *
+ * The world canvas is pixel art, so the chrome around it is built from the same
+ * vocabulary rather than a generic dashboard skin:
+ *
+ *   - Beveled stone plates. Every raised surface has a light top/left edge and a
+ *     dark bottom/right edge, drawn with hard box-shadow insets. No border-radius
+ *     anywhere; nothing in Minecraft is round.
+ *   - Inset slots. Wells (inputs, hotbar cells, list rows) invert the bevel so
+ *     they read as carved into the plate.
+ *   - Hard text shadow. Pixel type carries a 2px offset shadow, the way Minecraft
+ *     renders every string.
+ *   - Segmented meters. Progress reads as discrete XP-bar notches, not a smooth
+ *     gradient, so a value is countable at a glance.
+ *
+ * The deliberate deviation: Minecraft uses one font for everything. This UI
+ * carries real prose (agent rationale, evidence, misconception narratives), so
+ * pixel faces are reserved for labels, headings and numbers, and body copy is set
+ * in a legible sans. Readability wins over purity where the content is long.
+ */
+
 :root {
-  --bg: #080b16;
-  --bg-raised: #101527;
-  --bg-panel: #131a30;
-  --bg-inset: #0b1020;
-  --line: #223054;
-  --line-soft: #1a2340;
-  --text: #e7ecff;
-  --text-dim: #97a3c9;
-  --text-faint: #6a769c;
-  --accent: #7fb0ff;
-  --accent-strong: #4d8dff;
-  --good: #6fe0a8;
-  --warn: #ffcf5c;
-  --bad: #ff8f6b;
-  --radius: 10px;
-  --radius-sm: 6px;
-  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Neutrals carry a blue-violet bias so the chrome belongs to the night world
+     on the canvas rather than sitting on it as neutral grey. */
+  --void: #0b0d14;
+  --stone: #26262f;
+  --stone-raised: #2f2f3a;
+  --stone-hi: #4d4d5e;
+  --stone-lo: #101015;
+  --slot: #15151c;
+  --slot-lo: #0a0a0f;
+
+  --gold: #ffc64d;
+  --gold-dim: #a8802c;
+  --xp: #7be04a;
+  --warn: #ffc64d;
+  --danger: #ff6b5b;
+  --aqua: #6fd2ff;
+
+  --text: #e8e8f0;
+  --text-dim: #a0a0b4;
+  --text-faint: #6e6e84;
+  --text-on-gold: #1a1206;
+
+  --room-ember: #e08a52;
+  --room-forge: #c9584f;
+  --room-harbor: #4fa3c9;
+  --room-summit: #8f7fd6;
+
+  --px: 4px;
+  --bevel: 3px;
+
+  --font-display: "PressStart2P", ui-monospace, monospace;
+  --font-label: "Silkscreen", ui-monospace, monospace;
+  --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --shadow-text: 2px 2px 0 rgba(0, 0, 0, 0.65);
+}
+
+/* The world commits to a single night-time visual world, so the palette does not
+   invert. The toggle still gets a response: the plates lift and contrast rises so
+   the UI stays legible in a bright room. */
+@media (prefers-color-scheme: light) {
+  :root {
+    --stone: #32323d;
+    --stone-raised: #3b3b48;
+    --stone-hi: #62627a;
+    --text-dim: #b4b4c8;
+    --text-faint: #8a8aa0;
+  }
+}
+
+:root[data-theme="light"] {
+  --stone: #32323d;
+  --stone-raised: #3b3b48;
+  --stone-hi: #62627a;
+  --text-dim: #b4b4c8;
+  --text-faint: #8a8aa0;
+}
+
+:root[data-theme="dark"] {
+  --stone: #26262f;
+  --stone-raised: #2f2f3a;
+  --stone-hi: #4d4d5e;
+  --text-dim: #a0a0b4;
+  --text-faint: #6e6e84;
 }
 
 * {
@@ -27,12 +98,23 @@ html,
 body {
   margin: 0;
   padding: 0;
-  background: var(--bg);
+  background: var(--void);
   color: var(--text);
-  font-family: var(--sans);
+  font-family: var(--font-body);
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Faint dot-grid, the texture of a build grid seen from above. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 16px 16px;
 }
 
 button {
@@ -43,12 +125,16 @@ button {
 
 button:disabled {
   cursor: not-allowed;
-  opacity: 0.4;
+}
+
+:focus-visible {
+  outline: var(--bevel) solid var(--gold);
+  outline-offset: 2px;
 }
 
 code,
 pre {
-  font-family: var(--mono);
+  font-family: var(--font-mono);
   font-size: 12px;
 }
 
@@ -61,21 +147,51 @@ pre {
   color: var(--text-dim);
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ------------------------------------------------- beveled plate primitives */
+
+/* Raised plate: light edge top+left, dark edge bottom+right. */
+.plate {
+  background: var(--stone);
+  box-shadow:
+    inset var(--bevel) var(--bevel) 0 0 var(--stone-hi),
+    inset calc(var(--bevel) * -1) calc(var(--bevel) * -1) 0 0 var(--stone-lo);
+}
+
+/* Inset well: the same bevel, inverted, so it reads as carved in. */
+.well {
+  background: var(--slot);
+  box-shadow:
+    inset var(--bevel) var(--bevel) 0 0 var(--slot-lo),
+    inset calc(var(--bevel) * -1) calc(var(--bevel) * -1) 0 0 var(--stone-hi);
+}
+
 /* ---------------------------------------------------------------- layout */
 
 .app {
+  position: relative;
+  z-index: 1;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   gap: 12px;
   padding: 14px;
-  max-width: 1680px;
+  max-width: 1720px;
   margin: 0 auto;
 }
 
 .app__main {
   display: grid;
-  grid-template-columns: minmax(0, 1.55fr) minmax(340px, 0.85fr);
+  grid-template-columns: minmax(0, 1.5fr) minmax(348px, 0.85fr);
   gap: 12px;
   align-items: start;
 }
@@ -97,7 +213,7 @@ pre {
   max-height: calc(100vh - 28px);
 }
 
-@media (max-width: 1080px) {
+@media (max-width: 1100px) {
   .app__main {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -111,13 +227,22 @@ pre {
 /* ----------------------------------------------------------- command rail */
 
 .rail {
-  background: linear-gradient(180deg, var(--bg-raised), var(--bg-panel));
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 12px 14px;
+  background: var(--stone);
+  box-shadow:
+    inset var(--bevel) var(--bevel) 0 0 var(--stone-hi),
+    inset calc(var(--bevel) * -1) calc(var(--bevel) * -1) 0 0 var(--stone-lo);
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+}
+
+.rail__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .rail__brand {
@@ -126,35 +251,41 @@ pre {
   gap: 12px;
 }
 
+/* A single grass block, drawn with gradients: dirt body, grass cap, top face. */
 .rail__logo {
-  width: 26px;
-  height: 26px;
+  width: 34px;
+  height: 34px;
   flex: none;
-  background:
-    linear-gradient(135deg, #ffd45c 0 40%, transparent 40%),
-    linear-gradient(225deg, #7ff0d2 0 40%, transparent 40%),
-    linear-gradient(45deg, #b985e0 0 40%, transparent 40%),
-    #4d8dff;
-  border-radius: 4px;
   image-rendering: pixelated;
+  background:
+    linear-gradient(#7be04a 0 26%, #5aa832 26% 34%, #8b6239 34% 78%, #6b4a2a 78% 100%);
+  box-shadow:
+    inset 3px 3px 0 0 rgba(255, 255, 255, 0.28),
+    inset -3px -3px 0 0 rgba(0, 0, 0, 0.45);
 }
 
 .rail__title {
   margin: 0;
+  font-family: var(--font-display);
   font-size: 17px;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
+  text-shadow: var(--shadow-text);
+  color: var(--text);
 }
 
 .rail__tagline {
-  margin: 0;
+  margin: 5px 0 0;
+  font-family: var(--font-label);
   color: var(--text-faint);
-  font-size: 12px;
+  font-size: 13px;
+  letter-spacing: 0.02em;
 }
 
 .rail__controls {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  align-items: center;
 }
 
 .rail__file {
@@ -168,50 +299,35 @@ pre {
   gap: 8px;
 }
 
-.rail__speed {
-  display: inline-flex;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-}
-
-.speed {
-  background: transparent;
-  border: 0;
-  padding: 3px 9px;
-  font-size: 11px;
-  color: var(--text-faint);
-}
-
-.speed--active {
-  background: var(--accent-strong);
-  color: #041028;
+.rail__spacer {
+  flex: 1 1 auto;
 }
 
 .rail__notice {
   margin: 0;
-  padding: 7px 10px;
-  border-radius: var(--radius-sm);
-  background: rgba(255, 207, 92, 0.1);
-  border: 1px solid rgba(255, 207, 92, 0.3);
-  color: #ffe3a1;
-  font-size: 12px;
+  padding: 9px 12px;
+  background: var(--slot);
+  box-shadow:
+    inset var(--bevel) var(--bevel) 0 0 var(--slot-lo),
+    inset calc(var(--bevel) * -1) calc(var(--bevel) * -1) 0 0 var(--stone-hi);
+  color: var(--warn);
+  font-family: var(--font-label);
+  font-size: 13px;
+  letter-spacing: 0.01em;
 }
 
 .rail__notice--quiet {
-  background: rgba(127, 176, 255, 0.07);
-  border-color: rgba(127, 176, 255, 0.22);
   color: var(--text-dim);
 }
 
 .rail__editor {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
-  gap: 10px;
+  gap: 12px;
   align-items: start;
 }
 
-@media (max-width: 760px) {
+@media (max-width: 780px) {
   .rail__editor {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -220,148 +336,331 @@ pre {
 .field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .field__label {
-  font-size: 11px;
+  font-family: var(--font-label);
+  font-size: 13px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   color: var(--text-faint);
 }
 
 .field textarea {
   width: 100%;
-  background: var(--bg-inset);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  background: var(--slot);
+  border: 0;
+  box-shadow:
+    inset var(--bevel) var(--bevel) 0 0 var(--slot-lo),
+    inset calc(var(--bevel) * -1) calc(var(--bevel) * -1) 0 0 var(--stone-hi);
   color: var(--text);
-  padding: 8px;
-  font-family: var(--mono);
+  padding: 10px;
+  font-family: var(--font-mono);
   font-size: 12px;
   resize: vertical;
 }
 
 /* -------------------------------------------------------------- buttons */
 
+/* Minecraft button: raised plate, hard bevel, hard text shadow, and a press
+   that actually sinks the bevel rather than fading opacity. */
 .button {
-  border: 1px solid var(--line);
-  background: var(--bg-inset);
-  border-radius: var(--radius-sm);
-  padding: 7px 13px;
-  font-size: 13px;
-  transition: background 120ms ease, border-color 120ms ease;
+  position: relative;
+  border: 0;
+  background: var(--stone-raised);
+  box-shadow:
+    inset var(--bevel) var(--bevel) 0 0 var(--stone-hi),
+    inset calc(var(--bevel) * -1) calc(var(--bevel) * -1) 0 0 var(--stone-lo);
+  padding: 11px 16px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  text-shadow: var(--shadow-text);
+  transition: background 90ms steps(2), color 90ms steps(2);
 }
 
 .button:hover:not(:disabled) {
-  border-color: var(--accent);
+  background: #3d3d4b;
+  color: var(--gold);
+}
+
+.button:active:not(:disabled) {
+  box-shadow:
+    inset var(--bevel) var(--bevel) 0 0 var(--stone-lo),
+    inset calc(var(--bevel) * -1) calc(var(--bevel) * -1) 0 0 var(--stone-hi);
+}
+
+.button:disabled {
+  background: #1e1e26;
+  color: #55556a;
+  text-shadow: none;
+  box-shadow:
+    inset var(--bevel) var(--bevel) 0 0 #2a2a34,
+    inset calc(var(--bevel) * -1) calc(var(--bevel) * -1) 0 0 var(--stone-lo);
 }
 
 .button--primary {
-  background: var(--accent-strong);
-  border-color: var(--accent-strong);
-  color: #041028;
-  font-weight: 600;
+  background: var(--gold-dim);
+  color: var(--text-on-gold);
+  text-shadow: 2px 2px 0 rgba(255, 255, 255, 0.18);
+  box-shadow:
+    inset var(--bevel) var(--bevel) 0 0 #ffdb8f,
+    inset calc(var(--bevel) * -1) calc(var(--bevel) * -1) 0 0 #6b4d12;
 }
 
 .button--primary:hover:not(:disabled) {
-  background: #6ba1ff;
+  background: var(--gold);
+  color: var(--text-on-gold);
+}
+
+/* The one action the demo wants you to press next. */
+.button--ready {
+  animation: readyPulse 1.6s steps(2) infinite;
+}
+
+@keyframes readyPulse {
+  0%,
+  100% {
+    background: var(--gold-dim);
+  }
+  50% {
+    background: var(--gold);
+  }
 }
 
 .chip-button {
-  border: 1px solid var(--line);
-  background: var(--bg-inset);
-  border-radius: 999px;
-  padding: 4px 11px;
-  font-size: 12px;
+  border: 0;
+  background: var(--stone-raised);
+  box-shadow:
+    inset 2px 2px 0 0 var(--stone-hi),
+    inset -2px -2px 0 0 var(--stone-lo);
+  padding: 6px 11px;
+  font-family: var(--font-label);
+  font-size: 13px;
+  letter-spacing: 0.02em;
   color: var(--text-dim);
 }
 
 .chip-button:hover {
-  border-color: var(--accent);
-  color: var(--text);
+  color: var(--gold);
+  background: #3d3d4b;
+}
+
+.chip-button:active {
+  box-shadow:
+    inset 2px 2px 0 0 var(--stone-lo),
+    inset -2px -2px 0 0 var(--stone-hi);
 }
 
 .chip-button--tiny {
-  padding: 2px 9px;
-  font-size: 11px;
+  padding: 4px 9px;
+  font-size: 12px;
 }
 
 .badge {
-  border-radius: 999px;
-  padding: 3px 10px;
-  font-size: 11px;
+  padding: 5px 10px;
+  font-family: var(--font-label);
+  font-size: 13px;
   letter-spacing: 0.04em;
-  border: 1px solid var(--line);
   color: var(--text-dim);
+  background: var(--slot);
+  box-shadow:
+    inset 2px 2px 0 0 var(--slot-lo),
+    inset -2px -2px 0 0 var(--stone-hi);
 }
 
 .badge--live {
-  background: rgba(111, 224, 168, 0.12);
-  border-color: rgba(111, 224, 168, 0.4);
-  color: var(--good);
+  color: var(--xp);
 }
 
 .badge--mock {
-  background: rgba(127, 176, 255, 0.1);
-  border-color: rgba(127, 176, 255, 0.32);
-  color: var(--accent);
+  color: var(--aqua);
 }
 
 .badge--stage-complete {
-  background: rgba(111, 224, 168, 0.12);
-  color: var(--good);
+  color: var(--xp);
 }
 
-/* ------------------------------------------------------------- timeline */
+.speed {
+  border: 0;
+  background: var(--stone-raised);
+  box-shadow:
+    inset 2px 2px 0 0 var(--stone-hi),
+    inset -2px -2px 0 0 var(--stone-lo);
+  padding: 5px 9px;
+  font-family: var(--font-label);
+  font-size: 13px;
+  color: var(--text-faint);
+}
 
-.timeline {
+.speed--active {
+  background: var(--gold-dim);
+  color: var(--text-on-gold);
+  box-shadow:
+    inset 2px 2px 0 0 #ffdb8f,
+    inset -2px -2px 0 0 #6b4d12;
+}
+
+.rail__speed {
+  display: inline-flex;
+  gap: 3px;
+}
+
+/* ------------------------------------------------------- hotbar timeline */
+
+/* The eleven contract events as inventory slots. Discrete cells make pipeline
+   progress countable at a glance in a way a thin progress bar cannot. */
+.hotbar {
+  background: var(--stone);
+  box-shadow:
+    inset var(--bevel) var(--bevel) 0 0 var(--stone-hi),
+    inset calc(var(--bevel) * -1) calc(var(--bevel) * -1) 0 0 var(--stone-lo);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hotbar__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hotbar__title {
+  margin: 0;
+  font-family: var(--font-label);
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-faint);
+}
+
+.hotbar__count {
+  font-family: var(--font-label);
+  font-size: 13px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.hotbar__slots {
   list-style: none;
   margin: 0;
-  padding: 8px 10px;
-  display: flex;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(11, minmax(0, 1fr));
   gap: 4px;
-  overflow-x: auto;
-  background: var(--bg-panel);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
 }
 
-.timeline__step {
-  flex: 1 1 0;
-  min-width: 74px;
+@media (max-width: 900px) {
+  .hotbar__slots {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
 }
 
-.timeline__dot {
+@media (max-width: 560px) {
+  .hotbar__slots {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.slot {
+  position: relative;
   width: 100%;
-  background: transparent;
+  /* Grid tracks can shrink below the label's intrinsic width; without this the
+     buttons refuse to compress and push the page into horizontal scroll. */
+  min-width: 0;
+  overflow: hidden;
   border: 0;
-  border-top: 2px solid var(--line);
-  padding: 6px 2px 2px;
+  background: var(--slot);
+  box-shadow:
+    inset 3px 3px 0 0 var(--slot-lo),
+    inset -3px -3px 0 0 #35354a;
+  padding: 7px 4px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
   color: var(--text-faint);
-  font-size: 11px;
-  text-align: left;
 }
 
-.timeline__dot--done {
-  border-top-color: var(--accent);
+.slot__glyph {
+  width: 18px;
+  height: 18px;
+  image-rendering: pixelated;
+  background: #2b2b38;
+  box-shadow:
+    inset 2px 2px 0 0 rgba(255, 255, 255, 0.07),
+    inset -2px -2px 0 0 rgba(0, 0, 0, 0.45);
+}
+
+.slot__label {
+  font-family: var(--font-label);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  text-align: center;
+  line-height: 1.15;
+  color: inherit;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+/* The number that selects this slot from the keyboard. */
+.slot__key {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-family: var(--font-label);
+  font-size: 10px;
+  color: #3f3f52;
+}
+
+.slot--done {
   color: var(--text);
 }
 
-.timeline__dot:not(:disabled):hover {
-  border-top-color: var(--good);
+.slot--done .slot__key {
+  color: var(--text-faint);
+}
+
+.slot--done .slot__glyph {
+  background: var(--gold);
+  box-shadow:
+    inset 2px 2px 0 0 rgba(255, 255, 255, 0.55),
+    inset -2px -2px 0 0 rgba(0, 0, 0, 0.4);
+}
+
+.slot--done:hover {
+  background: #1e1e2a;
+}
+
+/* Minecraft's selected-hotbar-slot frame: a white box that overhangs the cell. */
+.slot--active::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  box-shadow: inset 0 0 0 3px #ffffff;
+  pointer-events: none;
+}
+
+.slot:disabled {
+  cursor: default;
 }
 
 /* ---------------------------------------------------------------- stage */
 
 .stage {
-  background: var(--bg-panel);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 10px;
+  background: var(--stone);
+  box-shadow:
+    inset var(--bevel) var(--bevel) 0 0 var(--stone-hi),
+    inset calc(var(--bevel) * -1) calc(var(--bevel) * -1) 0 0 var(--stone-lo);
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .stage__frame {
@@ -369,8 +668,10 @@ pre {
   width: 100%;
   aspect-ratio: 680 / 470;
   background: #0a0e1c;
-  border-radius: var(--radius-sm);
   overflow: hidden;
+  box-shadow:
+    inset var(--bevel) var(--bevel) 0 0 var(--slot-lo),
+    inset calc(var(--bevel) * -1) calc(var(--bevel) * -1) 0 0 var(--stone-hi);
 }
 
 .stage__canvas {
@@ -393,51 +694,46 @@ pre {
   pointer-events: auto;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   white-space: nowrap;
-  background: rgba(9, 13, 27, 0.82);
-  border: 1px solid rgba(127, 176, 255, 0.28);
-  border-radius: 999px;
-  padding: 1px 8px;
-  font-size: 10px;
+  border: 0;
+  background: rgba(11, 13, 20, 0.86);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.14);
+  padding: 3px 8px;
+  font-family: var(--font-label);
+  font-size: 12px;
   letter-spacing: 0.02em;
   color: var(--text-dim);
-  backdrop-filter: blur(2px);
+  text-shadow: var(--shadow-text);
 }
 
 .stage__label:hover,
 .stage__label--active {
-  border-color: var(--accent);
-  color: var(--text);
-  background: rgba(20, 30, 60, 0.94);
+  color: var(--gold);
+  box-shadow: inset 0 0 0 2px var(--gold);
+  background: rgba(11, 13, 20, 0.96);
 }
 
-/* Narrow screens: keep the room head-count badges, drop the names so the
-   world stays readable. The "Jump to" chips below remain the full list. */
 @media (max-width: 720px) {
-  .stage__label-name {
+  .stage__label:not(.stage__label--room) {
     display: none;
   }
 
   .stage__label {
-    padding: 1px 3px;
-    border-color: transparent;
+    padding: 2px 4px;
     background: transparent;
-  }
-
-  .stage__label:not(.stage__label--room) {
-    display: none;
+    box-shadow: none;
   }
 }
 
 .stage__label-count {
-  background: var(--accent-strong);
-  color: #041028;
-  border-radius: 999px;
-  min-width: 15px;
+  background: var(--gold);
+  color: var(--text-on-gold);
+  min-width: 16px;
   text-align: center;
-  font-weight: 700;
   padding: 0 4px;
+  text-shadow: none;
+  font-variant-numeric: tabular-nums;
 }
 
 .stage__footer {
@@ -450,7 +746,8 @@ pre {
 .stage__hint {
   margin: 0;
   color: var(--text-faint);
-  font-size: 12px;
+  font-family: var(--font-label);
+  font-size: 13px;
 }
 
 .stage__a11y {
@@ -458,14 +755,15 @@ pre {
   flex-wrap: wrap;
   gap: 5px;
   align-items: center;
-  border-top: 1px solid var(--line-soft);
-  padding-top: 8px;
+  padding-top: 10px;
+  box-shadow: inset 0 2px 0 0 rgba(0, 0, 0, 0.4);
 }
 
 .stage__a11y-title {
-  font-size: 11px;
+  font-family: var(--font-label);
+  font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   color: var(--text-faint);
   margin-right: 4px;
 }
@@ -473,16 +771,17 @@ pre {
 /* --------------------------------------------------------------- panels */
 
 .panel {
-  background: var(--bg-panel);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 12px;
+  background: var(--stone);
+  box-shadow:
+    inset var(--bevel) var(--bevel) 0 0 var(--stone-hi),
+    inset calc(var(--bevel) * -1) calc(var(--bevel) * -1) 0 0 var(--stone-lo);
+  padding: 14px;
 }
 
 .panel--detail {
   overflow-y: auto;
   flex: 1 1 auto;
-  min-height: 240px;
+  min-height: 260px;
 }
 
 .detail__head {
@@ -490,47 +789,57 @@ pre {
   justify-content: space-between;
   align-items: flex-start;
   gap: 10px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--line-soft);
+  padding-bottom: 12px;
+  box-shadow: inset 0 -2px 0 0 rgba(0, 0, 0, 0.4);
 }
 
 .detail__title {
   margin: 0;
-  font-size: 16px;
+  font-family: var(--font-display);
+  font-size: 13px;
+  line-height: 1.5;
+  text-wrap: balance;
+  text-shadow: var(--shadow-text);
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
 }
 
 .detail__subtitle {
-  margin: 2px 0 0;
+  margin: 6px 0 0;
+  font-family: var(--font-label);
   color: var(--text-faint);
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .detail__swatch {
-  width: 11px;
-  height: 11px;
-  border-radius: 3px;
+  width: 12px;
+  height: 12px;
+  flex: none;
+  box-shadow:
+    inset 2px 2px 0 0 rgba(255, 255, 255, 0.4),
+    inset -2px -2px 0 0 rgba(0, 0, 0, 0.4);
 }
 
 .detail__banner {
-  margin: 10px 0 0;
-  padding: 7px 10px;
-  border-radius: var(--radius-sm);
-  background: rgba(111, 224, 168, 0.1);
-  border: 1px solid rgba(111, 224, 168, 0.3);
-  color: var(--good);
-  font-size: 12px;
+  margin: 12px 0 0;
+  padding: 9px 12px;
+  background: var(--slot);
+  box-shadow:
+    inset 2px 2px 0 0 var(--slot-lo),
+    inset -2px -2px 0 0 var(--stone-hi);
+  color: var(--xp);
+  font-family: var(--font-label);
+  font-size: 13px;
 }
 
 .section {
-  padding: 12px 0;
-  border-bottom: 1px solid var(--line-soft);
+  padding: 14px 0;
+  box-shadow: inset 0 -2px 0 0 rgba(0, 0, 0, 0.35);
 }
 
 .section:last-child {
-  border-bottom: 0;
+  box-shadow: none;
 }
 
 .section__head {
@@ -538,62 +847,62 @@ pre {
   justify-content: space-between;
   align-items: flex-start;
   gap: 10px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
 }
 
 .section__title {
   margin: 0;
-  font-size: 12px;
+  font-family: var(--font-label);
+  font-size: 13px;
   text-transform: uppercase;
-  letter-spacing: 0.09em;
-  color: var(--text-dim);
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  text-shadow: var(--shadow-text);
 }
 
 .section__subtitle {
-  margin: 3px 0 0;
-  font-size: 12px;
+  margin: 4px 0 0;
+  font-size: 12.5px;
   color: var(--text-faint);
+  max-width: 62ch;
 }
 
 .section__body {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .chip {
   display: inline-flex;
   align-items: center;
-  border-radius: 999px;
-  padding: 2px 9px;
-  font-size: 11px;
-  background: rgba(127, 176, 255, 0.1);
-  border: 1px solid rgba(127, 176, 255, 0.25);
+  white-space: nowrap;
+  padding: 4px 9px;
+  font-family: var(--font-label);
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
   color: var(--text-dim);
+  background: var(--slot);
+  box-shadow:
+    inset 2px 2px 0 0 var(--slot-lo),
+    inset -2px -2px 0 0 #35354a;
 }
 
 .chip--good {
-  background: rgba(111, 224, 168, 0.12);
-  border-color: rgba(111, 224, 168, 0.35);
-  color: var(--good);
+  color: var(--xp);
 }
 
 .chip--warn {
-  background: rgba(255, 207, 92, 0.12);
-  border-color: rgba(255, 207, 92, 0.35);
   color: var(--warn);
 }
 
 .chip--bad {
-  background: rgba(255, 143, 107, 0.12);
-  border-color: rgba(255, 143, 107, 0.38);
-  color: var(--bad);
+  color: var(--danger);
 }
 
 .chip--accent {
-  background: rgba(127, 176, 255, 0.16);
-  border-color: rgba(127, 176, 255, 0.4);
-  color: var(--accent);
+  color: var(--gold);
 }
 
 .label-list {
@@ -602,55 +911,74 @@ pre {
   gap: 5px;
 }
 
+/* --------------------------------------------------------------- meters */
+
+/* Segmented like an XP bar: twenty notches, so a value can be counted. */
 .meter {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 5px;
 }
 
 .meter__row {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
+  align-items: baseline;
+  gap: 8px;
 }
 
 .meter__label {
+  font-family: var(--font-label);
+  font-size: 13px;
   color: var(--text-dim);
 }
 
 .meter__value {
-  font-family: var(--mono);
+  font-family: var(--font-label);
+  font-size: 13px;
   color: var(--text);
+  font-variant-numeric: tabular-nums;
 }
 
 .meter__track {
-  height: 5px;
-  background: var(--bg-inset);
-  border-radius: 999px;
-  overflow: hidden;
+  display: grid;
+  grid-template-columns: repeat(20, 1fr);
+  gap: 2px;
+  padding: 3px;
+  background: var(--slot);
+  box-shadow:
+    inset 2px 2px 0 0 var(--slot-lo),
+    inset -2px -2px 0 0 #35354a;
 }
 
-.meter__fill {
-  height: 100%;
-  border-radius: 999px;
+.meter__notch {
+  height: 9px;
+  background: #1e1e28;
 }
 
-.meter__fill--good {
-  background: var(--good);
+.meter__notch--on {
+  background: currentcolor;
 }
 
-.meter__fill--warn {
-  background: var(--warn);
+.meter--good {
+  color: var(--xp);
 }
 
-.meter__fill--bad {
-  background: var(--bad);
+.meter--warn {
+  color: var(--warn);
+}
+
+.meter--bad {
+  color: var(--danger);
 }
 
 .meter__hint {
-  font-size: 11px;
+  font-family: var(--font-label);
+  font-size: 12px;
   color: var(--text-faint);
 }
+
+/* ------------------------------------------------------------- evidence */
 
 .evidence {
   list-style: none;
@@ -658,54 +986,61 @@ pre {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
 
 .evidence__item code {
-  color: var(--text-dim);
-  background: var(--bg-inset);
-  border: 1px solid var(--line-soft);
-  border-radius: 4px;
-  padding: 1px 6px;
   display: inline-block;
+  color: var(--text-dim);
+  background: var(--slot);
+  box-shadow:
+    inset 2px 2px 0 0 var(--slot-lo),
+    inset -2px -2px 0 0 #35354a;
+  padding: 3px 8px;
   word-break: break-all;
 }
 
 .kv {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
 }
 
 .kv__key {
-  font-size: 11px;
+  font-family: var(--font-label);
+  font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.1em;
   color: var(--text-faint);
 }
 
 .empty {
-  padding: 24px 12px;
+  padding: 28px 14px;
   text-align: center;
 }
 
 .empty__title {
-  margin: 0 0 5px;
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  line-height: 1.6;
   color: var(--text);
-  font-size: 14px;
+  text-shadow: var(--shadow-text);
+  text-wrap: balance;
 }
 
 .empty__body {
-  margin: 0;
+  margin: 0 auto;
   color: var(--text-faint);
-  font-size: 12px;
-  max-width: 42ch;
-  margin-inline: auto;
+  font-size: 13px;
+  max-width: 44ch;
 }
+
+/* --------------------------------------------------------------- members */
 
 .member-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
   gap: 6px;
 }
 
@@ -713,38 +1048,51 @@ pre {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 1px;
+  gap: 3px;
   text-align: left;
-  background: var(--bg-inset);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius-sm);
-  padding: 7px 9px;
+  border: 0;
+  background: var(--slot);
+  box-shadow:
+    inset 2px 2px 0 0 var(--slot-lo),
+    inset -2px -2px 0 0 #35354a;
+  padding: 9px 10px;
 }
 
 .member:hover {
-  border-color: var(--accent);
+  background: #1e1e2a;
+  box-shadow:
+    inset 2px 2px 0 0 var(--slot-lo),
+    inset -2px -2px 0 0 var(--gold);
 }
 
 .member--flagged {
-  border-color: rgba(255, 143, 107, 0.5);
+  box-shadow:
+    inset 2px 2px 0 0 var(--slot-lo),
+    inset -2px -2px 0 0 var(--danger);
 }
 
 .member__name {
-  font-size: 13px;
+  font-family: var(--font-label);
+  font-size: 14px;
+  color: var(--text);
 }
 
 .member__meta {
-  font-size: 11px;
+  font-family: var(--font-label);
+  font-size: 12px;
   color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
 }
 
 .room-pill {
   border: 0;
-  border-radius: 999px;
-  padding: 3px 11px;
-  font-size: 11px;
-  font-weight: 700;
-  color: #0a1020;
+  padding: 5px 11px;
+  font-family: var(--font-label);
+  font-size: 13px;
+  color: #14100a;
+  box-shadow:
+    inset 2px 2px 0 0 rgba(255, 255, 255, 0.42),
+    inset -2px -2px 0 0 rgba(0, 0, 0, 0.4);
 }
 
 .agent-list {
@@ -761,19 +1109,26 @@ pre {
   justify-content: space-between;
   align-items: center;
   gap: 8px;
-  padding: 5px 8px;
-  background: var(--bg-inset);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius-sm);
-  font-size: 12px;
+  padding: 7px 10px;
+  background: var(--slot);
+  box-shadow:
+    inset 2px 2px 0 0 var(--slot-lo),
+    inset -2px -2px 0 0 #35354a;
+  font-family: var(--font-label);
+  font-size: 13px;
+}
+
+.agent-list__name {
+  color: var(--text-dim);
 }
 
 .json {
   margin: 0;
-  padding: 9px;
-  background: var(--bg-inset);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius-sm);
+  padding: 11px;
+  background: var(--slot);
+  box-shadow:
+    inset 2px 2px 0 0 var(--slot-lo),
+    inset -2px -2px 0 0 #35354a;
   overflow-x: auto;
   max-height: 340px;
   overflow-y: auto;
@@ -784,10 +1139,12 @@ pre {
 
 .plan-list {
   margin: 0;
-  padding-left: 18px;
+  padding: 0;
+  list-style: none;
   display: flex;
   flex-direction: column;
   gap: 5px;
+  counter-reset: plan;
 }
 
 .plan-item {
@@ -796,166 +1153,221 @@ pre {
   align-items: flex-start;
   width: 100%;
   text-align: left;
-  background: var(--bg-inset);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius-sm);
-  padding: 7px 9px;
+  border: 0;
+  background: var(--slot);
+  box-shadow:
+    inset 2px 2px 0 0 var(--slot-lo),
+    inset -2px -2px 0 0 #35354a;
+  padding: 9px 10px;
 }
 
 .plan-item:hover {
-  border-color: var(--accent);
+  background: #1e1e2a;
+  box-shadow:
+    inset 2px 2px 0 0 var(--slot-lo),
+    inset -2px -2px 0 0 var(--gold);
 }
 
 .plan-item__title {
-  font-size: 13px;
+  font-family: var(--font-label);
+  font-size: 14px;
+  color: var(--text);
 }
 
 .plan-item__meta {
-  font-size: 11px;
+  font-family: var(--font-label);
+  font-size: 12px;
   color: var(--text-faint);
 }
 
 /* ----------------------------------------------------------------- morph */
 
 .morph {
-  background: var(--bg-panel);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 12px;
+  background: var(--stone);
+  box-shadow:
+    inset var(--bevel) var(--bevel) 0 0 var(--stone-hi),
+    inset calc(var(--bevel) * -1) calc(var(--bevel) * -1) 0 0 var(--stone-lo);
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .morph__head {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .segmented {
   display: inline-flex;
-  background: var(--bg-inset);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  padding: 2px;
-  gap: 2px;
+  gap: 3px;
   align-self: flex-start;
 }
 
 .segmented__option {
   border: 0;
-  background: transparent;
-  border-radius: 4px;
-  padding: 5px 14px;
-  font-size: 12px;
+  background: var(--stone-raised);
+  box-shadow:
+    inset 2px 2px 0 0 var(--stone-hi),
+    inset -2px -2px 0 0 var(--stone-lo);
+  padding: 8px 16px;
+  font-family: var(--font-label);
+  font-size: 13.5px;
+  letter-spacing: 0.03em;
   color: var(--text-faint);
 }
 
+.segmented__option:hover {
+  color: var(--gold);
+}
+
 .segmented__option--active {
-  background: var(--accent-strong);
-  color: #041028;
-  font-weight: 600;
+  background: var(--gold-dim);
+  color: var(--text-on-gold);
+  box-shadow:
+    inset 2px 2px 0 0 #ffdb8f,
+    inset -2px -2px 0 0 #6b4d12;
 }
 
 .morph__selectors {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 12px;
   align-items: center;
 }
 
 .morph__rooms {
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 4px;
 }
 
 .room-tab {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  background: var(--bg-inset);
-  border: 1px solid var(--line-soft);
-  border-radius: 999px;
-  padding: 3px 11px;
-  font-size: 12px;
-  color: var(--text-dim);
+  gap: 6px;
+  border: 0;
+  background: var(--slot);
+  box-shadow:
+    inset 2px 2px 0 0 var(--slot-lo),
+    inset -2px -2px 0 0 #35354a;
+  padding: 6px 11px;
+  font-family: var(--font-label);
+  font-size: 13px;
+  color: var(--text-faint);
+}
+
+.room-tab:hover {
+  color: var(--text);
 }
 
 .room-tab--active {
   color: var(--text);
-  border-width: 1px;
+  background: #1e1e2a;
 }
 
 .room-tab__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
+  width: 10px;
+  height: 10px;
+  box-shadow:
+    inset 2px 2px 0 0 rgba(255, 255, 255, 0.4),
+    inset -2px -2px 0 0 rgba(0, 0, 0, 0.4);
 }
 
 .morph__student {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: 8px;
+  font-family: var(--font-label);
+  font-size: 13px;
   color: var(--text-faint);
 }
 
 .morph__student select {
-  background: var(--bg-inset);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  background: var(--slot);
+  border: 0;
+  box-shadow:
+    inset 2px 2px 0 0 var(--slot-lo),
+    inset -2px -2px 0 0 #35354a;
   color: var(--text);
-  padding: 4px 8px;
-  font: inherit;
+  padding: 6px 10px;
+  font-family: var(--font-label);
+  font-size: 13px;
 }
 
 .morph__body {
-  min-height: 150px;
+  min-height: 160px;
 }
 
 .morph__meta {
-  margin: 0 0 4px;
-  font-size: 13px;
+  margin: 0 0 6px;
+  font-family: var(--font-label);
+  font-size: 14px;
   color: var(--text);
 }
 
 .morph__intent {
-  margin: 0 0 8px;
-  font-size: 12px;
+  margin: 0 0 10px;
+  font-size: 13px;
   color: var(--text-dim);
+  max-width: 68ch;
 }
 
 .problem-list {
-  margin: 8px 0 0;
-  padding-left: 20px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 6px;
+  counter-reset: problem;
+}
+
+.problem-list li {
+  counter-increment: problem;
+  background: var(--slot);
+  box-shadow:
+    inset 2px 2px 0 0 var(--slot-lo),
+    inset -2px -2px 0 0 #35354a;
+  padding: 9px 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.problem-list li::before {
+  content: counter(problem, decimal-leading-zero);
+  font-family: var(--font-label);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--gold-dim);
 }
 
 .problem__prompt {
   display: block;
-  font-family: var(--mono);
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
   color: var(--text);
-  margin-bottom: 3px;
 }
 
 /* ------------------------------------------------------------------ feed */
 
+/* Reads as a Minecraft chat log: dark translucent well, monospace lines, a
+   colored square per speaker. */
 .feed {
-  background: var(--bg-panel);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 12px;
+  background: var(--stone);
+  box-shadow:
+    inset var(--bevel) var(--bevel) 0 0 var(--stone-hi),
+    inset calc(var(--bevel) * -1) calc(var(--bevel) * -1) 0 0 var(--stone-lo);
+  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   flex: 0 0 auto;
-  max-height: 40vh;
+  max-height: 42vh;
 }
 
 .feed__head {
@@ -965,81 +1377,274 @@ pre {
 }
 
 .feed__count {
-  font-size: 11px;
+  font-family: var(--font-label);
+  font-size: 12px;
   color: var(--text-faint);
-  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .feed__empty {
   margin: 0;
-  font-size: 12px;
+  font-family: var(--font-label);
+  font-size: 13px;
 }
 
 .feed__list {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 6px;
   display: flex;
   flex-direction: column;
   gap: 3px;
   overflow-y: auto;
+  background: rgba(0, 0, 0, 0.42);
+  box-shadow:
+    inset 2px 2px 0 0 var(--slot-lo),
+    inset -2px -2px 0 0 #35354a;
 }
 
 .feed__item {
   display: flex;
-  gap: 8px;
+  gap: 9px;
   width: 100%;
   text-align: left;
   align-items: flex-start;
-  background: var(--bg-inset);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius-sm);
+  border: 0;
+  background: transparent;
   padding: 6px 8px;
 }
 
 .feed__item:hover {
-  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .feed__item--active {
-  border-color: var(--accent);
-  background: rgba(77, 141, 255, 0.12);
+  background: rgba(255, 198, 77, 0.14);
+  box-shadow: inset 0 0 0 2px var(--gold);
 }
 
 .feed__dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 2px;
-  margin-top: 4px;
+  width: 9px;
+  height: 9px;
+  margin-top: 5px;
   flex: none;
+  box-shadow:
+    inset 2px 2px 0 0 rgba(255, 255, 255, 0.4),
+    inset -2px -2px 0 0 rgba(0, 0, 0, 0.4);
 }
 
 .feed__text {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  gap: 1px;
 }
 
 .feed__type {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--gold);
 }
 
 .feed__summary {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-dim);
 }
 
 .feed__agent {
-  font-size: 10px;
+  font-family: var(--font-label);
+  font-size: 11px;
   color: var(--text-faint);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
 }
 
-@media (max-width: 1080px) {
+@media (max-width: 1100px) {
   .feed {
     max-height: none;
   }
+}
+
+/* ---------------------------------------------------------------- toasts */
+
+/* Minecraft advancement toast: a plate that slides in from the right, holds,
+   and leaves. This is the UX fix for events you would otherwise miss while
+   watching the world instead of the feed. */
+/* Bottom-right, not Minecraft's top-right: the command rail lives up there and
+   a toast that covers the controls is worse than one that is slightly off-canon. */
+.toasts {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+  max-width: min(360px, calc(100vw - 32px));
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #1c1a10;
+  box-shadow:
+    inset 3px 3px 0 0 #6b5a2a,
+    inset -3px -3px 0 0 #0a0904;
+  animation: toastIn 220ms steps(4) both;
+}
+
+.toast--leaving {
+  animation: toastOut 220ms steps(4) both;
+}
+
+@keyframes toastIn {
+  from {
+    transform: translateX(120%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes toastOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+}
+
+.toast__icon {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  image-rendering: pixelated;
+  box-shadow:
+    inset 2px 2px 0 0 rgba(255, 255, 255, 0.4),
+    inset -2px -2px 0 0 rgba(0, 0, 0, 0.45);
+}
+
+.toast__text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.toast__kicker {
+  font-family: var(--font-label);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+  text-shadow: var(--shadow-text);
+}
+
+.toast__body {
+  font-family: var(--font-label);
+  font-size: 13px;
+  color: var(--text);
+  text-shadow: var(--shadow-text);
+}
+
+/* --------------------------------------------------------------- tooltip */
+
+/* Minecraft item tooltip: near-black plate with a violet border. */
+[data-tip] {
+  position: relative;
+}
+
+/* The tip box is only generated on hover. An always-present `opacity: 0` box
+   still occupies layout, and a row of nowrap tips was silently widening the
+   document's scroll area on narrow screens. */
+[data-tip]::after {
+  content: none;
+}
+
+[data-tip]:hover::after,
+[data-tip]:focus-visible::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  width: max-content;
+  max-width: 240px;
+  padding: 5px 9px;
+  background: #100010;
+  box-shadow: inset 0 0 0 2px #4b2ea8;
+  color: var(--text);
+  font-family: var(--font-label);
+  font-size: 12px;
+  line-height: 1.35;
+  text-shadow: var(--shadow-text);
+  pointer-events: none;
+}
+
+/* A disabled control must never explain itself in a floating box that outlives
+   the pointer — the tip would sit over the layout with nothing to dismiss it. */
+[data-tip]:disabled::after,
+[data-tip][aria-disabled="true"]::after {
+  content: none;
+}
+
+/* Slots sit in a tight grid, so edge tooltips anchor inward instead of centring
+   and hanging off the viewport. */
+.hotbar__slots li:first-child [data-tip]:hover::after,
+.hotbar__slots li:first-child [data-tip]:focus-visible::after {
+  left: 0;
+  transform: none;
+}
+
+.hotbar__slots li:last-child [data-tip]:hover::after,
+.hotbar__slots li:last-child [data-tip]:focus-visible::after {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
+/* Hover tips are meaningless on touch; the aria-labels still carry the text. */
+@media (max-width: 720px), (hover: none) {
+  [data-tip]:hover::after,
+  [data-tip]:focus-visible::after {
+    content: none;
+  }
+}
+
+/* --------------------------------------------------------------- helpbar */
+
+.helpbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--slot);
+  box-shadow:
+    inset 2px 2px 0 0 var(--slot-lo),
+    inset -2px -2px 0 0 #35354a;
+  font-family: var(--font-label);
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.helpbar kbd {
+  display: inline-block;
+  min-width: 20px;
+  text-align: center;
+  padding: 2px 5px;
+  margin-right: 5px;
+  background: var(--stone-raised);
+  box-shadow:
+    inset 2px 2px 0 0 var(--stone-hi),
+    inset -2px -2px 0 0 var(--stone-lo);
+  font-family: var(--font-label);
+  font-size: 11px;
+  color: var(--text-dim);
 }

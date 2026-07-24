@@ -41,13 +41,44 @@ export function CommandRail({ controller }: { controller: EduForgeController }) 
 
   return (
     <header className="rail">
-      <div className="rail__brand">
-        <span className="rail__logo" aria-hidden="true" />
-        <div>
-          <h1 className="rail__title">EduForge</h1>
-          <p className="rail__tagline">
-            Every assignment teaches the student. Every submission rebuilds the school.
-          </p>
+      <div className="rail__top">
+        <div className="rail__brand">
+          <span className="rail__logo" aria-hidden="true" />
+          <div>
+            <h1 className="rail__title">EduForge</h1>
+            <p className="rail__tagline">
+              Every submission rebuilds the school
+            </p>
+          </div>
+        </div>
+
+        <div className="rail__status">
+          <span
+            className={`badge badge--${transport}`}
+            data-tip={
+              transport === "live"
+                ? "Connected to the run API and SSE stream"
+                : "Replaying the frozen sequence with the same AgentEvent contract"
+            }
+          >
+            {transport === "live" ? "Live API" : "Mock replay"}
+          </span>
+          <span className={`badge badge--stage badge--stage-${stage}`}>
+            {stageLabel}
+          </span>
+          <div className="rail__speed" role="group" aria-label="Replay speed">
+            {SPEEDS.map((value) => (
+              <button
+                key={value}
+                type="button"
+                className={`speed${speed === value ? " speed--active" : ""}`}
+                onClick={() => setSpeed(value)}
+                aria-pressed={speed === value}
+              >
+                {value}x
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -61,22 +92,7 @@ export function CommandRail({ controller }: { controller: EduForgeController }) 
         />
         <button
           type="button"
-          className="button button--ghost"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          Upload assignment
-        </button>
-        <button
-          type="button"
-          className="button button--ghost"
-          onClick={() => setEditorOpen((value) => !value)}
-          aria-expanded={editorOpen}
-        >
-          {editorOpen ? "Hide text" : "Edit text"}
-        </button>
-        <button
-          type="button"
-          className="button button--primary"
+          className={`button button--primary${canStart ? " button--ready" : ""}`}
           onClick={() => void startRun()}
           disabled={!canStart}
         >
@@ -84,44 +100,65 @@ export function CommandRail({ controller }: { controller: EduForgeController }) 
         </button>
         <button
           type="button"
-          className="button button--primary"
+          className={`button button--primary${canSimulate ? " button--ready" : ""}`}
           onClick={() => void simulate()}
           disabled={!canSimulate}
+          data-tip={
+            canSimulate ? undefined : "Available once the rooms have been built"
+          }
         >
-          Run classroom simulation
+          Run classroom
         </button>
-        <button type="button" className="button button--ghost" onClick={skipAnimation}>
-          Skip animation
+        <span className="rail__spacer" />
+        <button
+          type="button"
+          className="button"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          Upload
         </button>
-        <button type="button" className="button button--ghost" onClick={reset}>
-          Reset demo
+        <button
+          type="button"
+          className="button"
+          onClick={() => setEditorOpen((value) => !value)}
+          aria-expanded={editorOpen}
+        >
+          {editorOpen ? "Hide text" : "Edit text"}
+        </button>
+        <button
+          type="button"
+          className="button"
+          onClick={skipAnimation}
+          data-tip="Drain queued events and settle the world"
+        >
+          Skip
+        </button>
+        <button type="button" className="button" onClick={reset}>
+          Reset
         </button>
       </div>
 
-      <div className="rail__status">
-        <span className={`badge badge--${transport}`}>
-          {transport === "live" ? "Live API + SSE" : "Mock event replay"}
+      <div className="helpbar">
+        <span>
+          <kbd>Enter</kbd>
+          {canSimulate ? "Run classroom" : "Start run"}
         </span>
-        <span className={`badge badge--stage badge--stage-${stage}`}>{stageLabel}</span>
-        <div className="rail__speed" role="group" aria-label="Replay speed">
-          {SPEEDS.map((value) => (
-            <button
-              key={value}
-              type="button"
-              className={`speed${speed === value ? " speed--active" : ""}`}
-              onClick={() => setSpeed(value)}
-            >
-              {value}×
-            </button>
-          ))}
-        </div>
+        <span>
+          <kbd>1</kbd>-<kbd>9</kbd> Jump to stage
+        </span>
+        <span>
+          <kbd>R</kbd>Reset
+        </span>
+        <span>
+          <kbd>Esc</kbd>Clear selection
+        </span>
       </div>
 
       {notice && <p className="rail__notice">{notice}</p>}
       {backendDetected === false && !notice && (
         <p className="rail__notice rail__notice--quiet">
-          No backend detected on /api/runs. Running the frozen demo sequence with the
-          same AgentEvent contract the live stream uses.
+          No backend on /api/runs. Replaying the frozen sequence with the same
+          AgentEvent contract the live stream uses.
         </p>
       )}
 
@@ -129,7 +166,7 @@ export function CommandRail({ controller }: { controller: EduForgeController }) 
         <div className="rail__editor">
           <label className="field">
             <span className="field__label">
-              Assignment text{fileName ? ` · ${fileName}` : ""}
+              Assignment text{fileName ? ` — ${fileName}` : ""}
             </span>
             <textarea
               value={assignmentText}
@@ -145,18 +182,18 @@ export function CommandRail({ controller }: { controller: EduForgeController }) 
               onChange={(event) => setTeachingIntent(event.target.value)}
               rows={3}
             />
+            <button
+              type="button"
+              className="chip-button chip-button--tiny"
+              onClick={() => {
+                setAssignmentText(mockAssignment.source_text);
+                setTeachingIntent(mockAssignment.teaching_intent);
+                setFileName(null);
+              }}
+            >
+              Restore sample
+            </button>
           </label>
-          <button
-            type="button"
-            className="chip-button chip-button--tiny"
-            onClick={() => {
-              setAssignmentText(mockAssignment.source_text);
-              setTeachingIntent(mockAssignment.teaching_intent);
-              setFileName(null);
-            }}
-          >
-            Restore sample assignment
-          </button>
         </div>
       )}
     </header>

@@ -44,6 +44,13 @@ export function Chip({
   );
 }
 
+const METER_NOTCHES = 20;
+
+/**
+ * Segmented like an XP bar rather than a smooth fill: twenty notches means a
+ * value can be counted, not just eyeballed, which matters when two students'
+ * mastery differ by one step.
+ */
 export function Meter({
   label,
   value,
@@ -55,19 +62,30 @@ export function Meter({
   hint?: string;
   tone?: "good" | "warn" | "bad";
 }) {
-  const percent = Math.round(Math.max(0, Math.min(1, value)) * 100);
+  const clamped = Math.max(0, Math.min(1, value));
+  const percent = Math.round(clamped * 100);
+  const filled = Math.round(clamped * METER_NOTCHES);
   const resolvedTone = tone ?? (value >= 0.7 ? "good" : value >= 0.45 ? "warn" : "bad");
   return (
-    <div className="meter">
+    <div className={`meter meter--${resolvedTone}`}>
       <div className="meter__row">
         <span className="meter__label">{label}</span>
         <span className="meter__value">{percent}%</span>
       </div>
-      <div className="meter__track">
-        <div
-          className={`meter__fill meter__fill--${resolvedTone}`}
-          style={{ width: `${percent}%` }}
-        />
+      <div
+        className="meter__track"
+        role="meter"
+        aria-valuenow={percent}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={label}
+      >
+        {Array.from({ length: METER_NOTCHES }, (_, index) => (
+          <span
+            key={index}
+            className={`meter__notch${index < filled ? " meter__notch--on" : ""}`}
+          />
+        ))}
       </div>
       {hint && <span className="meter__hint">{hint}</span>}
     </div>
