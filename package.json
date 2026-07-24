@@ -1,0 +1,29 @@
+{
+  "name": "eduforge",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest",
+    "verify:world": "node scripts/verify-world.mjs"
+  },
+  "dependencies": {
+    "next": "^15.5.21",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^15.5.21",
+    "playwright": "1.49",
+    "typescript": "5.7",
+    "vitest": "^2.1.9"
+  }
+}

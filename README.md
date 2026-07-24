@@ -6,6 +6,27 @@ EduForge is a self-evolving classroom intelligence system shown as a 2D isometri
 
 The goal is one polished vertical slice, not a full LMS.
 
+## Running the app
+
+```bash
+npm install
+npm run dev     # http://localhost:3000
+```
+
+The frontend runs standalone. With no backend on `/api/runs` it replays a frozen
+event sequence using the same `AgentEvent` envelope the live SSE stream uses; as
+soon as the API routes exist it switches to `POST /api/runs` plus
+`GET /api/runs/:runId/events` automatically.
+
+Checks:
+
+```bash
+npm run lint
+npm run typecheck
+npm run test -- --run
+npm run build
+```
+
 ## Build Strategy
 
 Use a branch-per-owner workflow with frozen contracts so four people can work in parallel and merge without archaeology.
