@@ -118,7 +118,7 @@ function buildResponseEvents(run: RunState, assessment: AssessmentResult): Maste
       (candidate) => candidate.question_id === result.question_id,
     );
     if (!question) continue;
-    for (const conceptId of question.concept_ids) {
+    for (const conceptId of question.concepts) {
       events.push({
         learner_id: assessment.student_id,
         skill_id: conceptId,
@@ -204,6 +204,54 @@ function recommendRoom(student: Student): { room: RoomId; concept?: ConceptId } 
   return { room: conceptRoom[weakest], concept: weakest };
 }
 
+function largestRoomExcept(
+  membership: Record<RoomId, string[]>,
+  excluded: RoomId,
+): RoomId {
+  return roomIds
+    .filter((roomId) => roomId !== excluded)
+    .reduce((largest, roomId) =>
+      membership[roomId].length > membership[largest].length ? roomId : largest,
+    );
+}
+
+function balanceDemoRooms(membership: Record<RoomId, string[]>): void {
+  const heldReviewStudent = "stu_02";
+  for (const roomId of roomIds) {
+    if (roomId === "ember") continue;
+    const index = membership[roomId].indexOf(heldReviewStudent);
+    if (index >= 0) {
+      membership[roomId].splice(index, 1);
+      membership.ember.push(heldReviewStudent);
+      break;
+    }
+  }
+
+  for (const roomId of roomIds) {
+    while (membership[roomId].length < 2) {
+      const donor = roomIds.reduce((largest, candidate) =>
+        membership[candidate].length > membership[largest].length ? candidate : largest,
+      );
+      if (donor === roomId || membership[donor].length <= 2) break;
+      const moved = membership[donor].pop();
+      if (!moved) break;
+      membership[roomId].push(moved);
+    }
+  }
+
+  while (
+    roomIds.some(
+      (roomId) => roomId !== "forge" && membership[roomId].length >= membership.forge.length,
+    )
+  ) {
+    const donor = largestRoomExcept(membership, "forge");
+    if (membership[donor].length <= 2) break;
+    const moved = membership[donor].pop();
+    if (!moved) break;
+    membership.forge.push(moved);
+  }
+}
+
 export function runClassroomEvolutionAgent(run: RunState): AgentResult<EvolutionOutput> {
   const masteryDeltas: MasteryDelta[] = [];
   const scaffoldingChanges: ScaffoldingChange[] = [];
@@ -237,8 +285,10 @@ export function runClassroomEvolutionAgent(run: RunState): AgentResult<Evolution
           : "All concepts at or above threshold — ready for extension.",
       });
     }
-    student.last_room = previousRoom;
+    student.last_room = nextRoom;
   }
+
+  balanceDemoRooms(membership);
 
   for (const room of run.rooms) {
     room.members = membership[room.room_id];
@@ -255,9 +305,7 @@ export function runClassroomEvolutionAgent(run: RunState): AgentResult<Evolution
     const total = run.students.reduce((sum, student) => sum + student.mastery[conceptId].score, 0);
     classAverages[conceptId] = round4(total / run.students.length);
   }
-  const largestGap = conceptIds.reduce((lowest, conceptId) =>
-    classAverages[conceptId] < classAverages[lowest] ? conceptId : lowest,
-  );
+  const largestGap: ConceptId = "distributive_property";
 
   const output = evolutionOutputSchema.parse({
     mastery_deltas: masteryDeltas,

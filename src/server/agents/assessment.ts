@@ -35,7 +35,7 @@ const misconceptionIds = [
   "like_terms_overcombine",
 ] as const satisfies readonly MisconceptionId[];
 
-const misconceptionLabels: Record<MisconceptionId, string> = {
+const misconceptionLabels: Partial<Record<MisconceptionId, string>> = {
   sign_error_negatives: "sign error on negative integers",
   partial_distribution: "distributed to only the first term",
   operation_order_confusion: "operations applied in the wrong order",
@@ -66,6 +66,7 @@ const assessmentOutputSchema = z.object({
     z.object({
       review_id: z.string().min(1),
       run_id: z.string().min(1),
+      agent: z.literal("assessment_agent"),
       review_type: z.enum(["low_confidence_grade", "final_plan"]),
       subject_id: z.string().min(1),
       reason: z.string().min(1),
@@ -111,7 +112,7 @@ function gradeSubmission(
         // stands but certainty drops.
         confidence -= PENALTY_CONTRADICTORY_WORK;
         trace.push(
-          `${response.question_id}: work contradicts the answer — shows ${misconceptionLabels[response.error_fingerprint]} (${evidenceRef})`,
+          `${response.question_id}: work contradicts the answer — shows ${misconceptionLabels[response.error_fingerprint] ?? response.error_fingerprint} (${evidenceRef})`,
         );
       }
     } else {
@@ -122,7 +123,7 @@ function gradeSubmission(
         responseMisconceptions.push(response.error_fingerprint);
         misconceptions.add(response.error_fingerprint);
         trace.push(
-          `${response.question_id}: work "${response.work_shown}" shows ${misconceptionLabels[response.error_fingerprint]} → ${response.error_fingerprint} (${evidenceRef})`,
+          `${response.question_id}: work "${response.work_shown}" shows ${misconceptionLabels[response.error_fingerprint] ?? response.error_fingerprint} → ${response.error_fingerprint} (${evidenceRef})`,
         );
       } else {
         confidence -= PENALTY_UNEXPLAINED_WRONG;
@@ -184,6 +185,7 @@ export function runAssessmentAgent(
     .map((assessment) => ({
       review_id: `rev-grade-${assessment.student_id}`,
       run_id: run.run_id,
+      agent: "assessment_agent",
       review_type: "low_confidence_grade",
       subject_id: assessment.student_id,
       reason: `Grading confidence ${assessment.confidence} is below ${REVIEW_CONFIDENCE_THRESHOLD}: ambiguous or missing work.`,

@@ -7,13 +7,13 @@ import { eventTypes } from "@/contracts";
 import type { RunState } from "@/contracts";
 import { getReviewGates, getRunAudit, resetAuditLog } from "@/server/audit";
 import { getRunEvents, resetEventBus } from "@/server/events";
+import { createRun } from "@/server/coreLoop";
 import { approvePlan } from "./approvePlan";
 import { resetRun } from "./runProvider";
-import { buildSeedRun } from "./seedRun";
 import { simulateSubmissions } from "./simulateSubmissions";
 
 const RUN_ID = "test-run";
-const EMBER_SEED_MEMBERS = ["s01", "s02", "s03", "s04", "s05"];
+const EMBER_SEED_MEMBERS = ["stu_01", "stu_02", "stu_03", "stu_04", "stu_05"];
 
 function domainSnapshot(run: RunState): string {
   // Events carry wall-clock timestamps; everything else must be identical.
@@ -55,26 +55,26 @@ describe("simulateSubmissions", () => {
     }
   });
 
-  it("puts exactly one low-confidence grade in the review queue (Dev, s02)", () => {
+  it("puts exactly one low-confidence grade in the review queue (Dev, stu_02)", () => {
     const run = simulateSubmissions(RUN_ID);
     const gradeReviews = run.review_queue.filter(
       (item) => item.review_type === "low_confidence_grade",
     );
     expect(gradeReviews).toHaveLength(1);
-    expect(gradeReviews[0].subject_id).toBe("s02");
+    expect(gradeReviews[0].subject_id).toBe("stu_02");
     expect(gradeReviews[0].status).toBe("pending");
 
-    const dev = run.assessments.find((assessment) => assessment.student_id === "s02");
+    const dev = run.assessments.find((assessment) => assessment.student_id === "stu_02");
     expect(dev?.review_state).toBe("needs_review");
     expect(dev?.confidence).toBeLessThan(0.7);
-    for (const other of run.assessments.filter((assessment) => assessment.student_id !== "s02")) {
+    for (const other of run.assessments.filter((assessment) => assessment.student_id !== "stu_02")) {
       expect(other.review_state).toBe("auto_approved");
       expect(other.confidence).toBeGreaterThanOrEqual(0.7);
     }
   });
 
   it("shows the Ember intervention succeeding: 4 of 5 improve integer operations", () => {
-    const seedBaseline = buildSeedRun("baseline");
+    const seedBaseline = createRun({ demo_mode: true }).state;
     const run = simulateSubmissions(RUN_ID);
 
     const improvements = EMBER_SEED_MEMBERS.map((studentId) => {
@@ -86,12 +86,12 @@ describe("simulateSubmissions", () => {
     });
 
     expect(improvements.filter((entry) => entry.improved)).toHaveLength(4);
-    expect(improvements.find((entry) => entry.studentId === "s02")?.improved).toBe(false);
+    expect(improvements.find((entry) => entry.studentId === "stu_02")?.improved).toBe(false);
   });
 
-  it("moves Maya (s01) from high scaffolding to medium", () => {
+  it("moves Maya (stu_01) from high scaffolding to medium", () => {
     const run = simulateSubmissions(RUN_ID);
-    const maya = run.students.find((student) => student.student_id === "s01");
+    const maya = run.students.find((student) => student.student_id === "stu_01");
     expect(maya?.scaffolding_level).toBe(2);
 
     const event = getRunEvents(RUN_ID).find((entry) => entry.event_type === "student.models.updated");
@@ -100,7 +100,7 @@ describe("simulateSubmissions", () => {
       from_label: string;
       to_label: string;
     }>;
-    const mayaChange = changes.find((change) => change.student_id === "s01");
+    const mayaChange = changes.find((change) => change.student_id === "stu_01");
     expect(mayaChange?.from_label).toBe("high");
     expect(mayaChange?.to_label).toBe("medium");
   });
@@ -123,7 +123,7 @@ describe("simulateSubmissions", () => {
     }
     const ember = run.rooms.find((room) => room.room_id === "ember")!;
     expect(ember.members.length).toBeLessThan(EMBER_SEED_MEMBERS.length);
-    expect(ember.members).toContain("s02");
+    expect(ember.members).toContain("stu_02");
   });
 
   it("plans tomorrow in the required order with evidence on every step", () => {
@@ -194,7 +194,7 @@ describe("approvePlan", () => {
       (item) => item.review_type === "low_confidence_grade",
     );
     expect(gradeItem?.status).toBe("pending");
-    const dev = result.run.assessments.find((assessment) => assessment.student_id === "s02");
+    const dev = result.run.assessments.find((assessment) => assessment.student_id === "stu_02");
     expect(dev?.review_state).toBe("needs_review");
 
     const audit = getRunAudit(RUN_ID);

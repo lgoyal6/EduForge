@@ -5,9 +5,9 @@
  * assignment (asgn-multistep-001) and the BKT parameters so the required demo
  * outcomes hold:
  *   - Ember's integer-operations intervention succeeds (4 of 5 improve).
- *   - Dev Patel (s02) produces the one low-confidence grade for review.
+ *   - Dev Patel (stu_02) produces the one low-confidence grade for review.
  *   - Forge (distributive property) becomes the largest remaining gap.
- *   - Maya Chen (s01) earns a scaffolding drop from high (3) to medium (2).
+ *   - Maya Chen (stu_01) earns a scaffolding drop from high (3) to medium (2).
  *
  * `error_fingerprint` marks a known error pattern visible in the written work;
  * the Assessment Agent classifies misconceptions from it deterministically.
@@ -43,8 +43,8 @@ export const demoAnswerKey: Record<string, string> = {
 export const demoSubmissions: SeedSubmission[] = [
   // --- Ember (integer operations intervention) --------------------------
   {
-    submission_id: "sub-s01",
-    student_id: "s01",
+    submission_id: "sub-stu_01",
+    student_id: "stu_01",
     responses: [
       { question_id: "q1", answer: "x = -11", work_shown: "x = -4 - 7 = -11" },
       { question_id: "q2", answer: "x = -5", work_shown: "2x + 4 = -6; 2x = -10; x = -5" },
@@ -60,8 +60,8 @@ export const demoSubmissions: SeedSubmission[] = [
     ],
   },
   {
-    submission_id: "sub-s02",
-    student_id: "s02",
+    submission_id: "sub-stu_02",
+    student_id: "stu_02",
     responses: [
       {
         question_id: "q1",
@@ -88,8 +88,8 @@ export const demoSubmissions: SeedSubmission[] = [
     ],
   },
   {
-    submission_id: "sub-s03",
-    student_id: "s03",
+    submission_id: "sub-stu_03",
+    student_id: "stu_03",
     responses: [
       {
         question_id: "q1",
@@ -110,8 +110,8 @@ export const demoSubmissions: SeedSubmission[] = [
     ],
   },
   {
-    submission_id: "sub-s04",
-    student_id: "s04",
+    submission_id: "sub-stu_04",
+    student_id: "stu_04",
     responses: [
       { question_id: "q1", answer: "x = -11", work_shown: "x = -4 - 7 = -11" },
       { question_id: "q2", answer: "x = -5", work_shown: "2x = -10; x = -5" },
@@ -132,8 +132,8 @@ export const demoSubmissions: SeedSubmission[] = [
     ],
   },
   {
-    submission_id: "sub-s05",
-    student_id: "s05",
+    submission_id: "sub-stu_05",
+    student_id: "stu_05",
     responses: [
       { question_id: "q1", answer: "x = -11", work_shown: "x = -4 - 7 = -11" },
       { question_id: "q2", answer: "x = -5", work_shown: "2x + 4 = -6; x = -5" },
@@ -150,8 +150,8 @@ export const demoSubmissions: SeedSubmission[] = [
   },
   // --- Forge (partial distribution persists) ----------------------------
   {
-    submission_id: "sub-s06",
-    student_id: "s06",
+    submission_id: "sub-stu_06",
+    student_id: "stu_06",
     responses: [
       { question_id: "q1", answer: "x = -11", work_shown: "x = -4 - 7" },
       { question_id: "q2", answer: "x = -5", work_shown: "2x = -10; x = -5" },
@@ -172,8 +172,8 @@ export const demoSubmissions: SeedSubmission[] = [
     ],
   },
   {
-    submission_id: "sub-s07",
-    student_id: "s07",
+    submission_id: "sub-stu_07",
+    student_id: "stu_07",
     responses: [
       { question_id: "q1", answer: "x = -11", work_shown: "x = -4 - 7 = -11" },
       { question_id: "q2", answer: "x = -5", work_shown: "2x = -10" },
@@ -199,8 +199,8 @@ export const demoSubmissions: SeedSubmission[] = [
     ],
   },
   {
-    submission_id: "sub-s08",
-    student_id: "s08",
+    submission_id: "sub-stu_08",
+    student_id: "stu_08",
     responses: [
       { question_id: "q1", answer: "x = -11", work_shown: "x = -4 - 7 = -11" },
       { question_id: "q2", answer: "x = -5", work_shown: "2x + 4 = -6; x = -5" },
@@ -216,8 +216,8 @@ export const demoSubmissions: SeedSubmission[] = [
     ],
   },
   {
-    submission_id: "sub-s09",
-    student_id: "s09",
+    submission_id: "sub-stu_09",
+    student_id: "stu_09",
     responses: [
       { question_id: "q1", answer: "x = -11", work_shown: "x = -4 - 7 = -11" },
       {
@@ -249,8 +249,8 @@ export const demoSubmissions: SeedSubmission[] = [
   },
   // --- Harbor (sequencing transfer) --------------------------------------
   {
-    submission_id: "sub-s10",
-    student_id: "s10",
+    submission_id: "sub-stu_10",
+    student_id: "stu_10",
     responses: [
       { question_id: "q1", answer: "x = -11", work_shown: "x = -4 - 7 = -11" },
       { question_id: "q2", answer: "x = -5", work_shown: "2x + 4 = -6; x = -5" },
@@ -261,8 +261,8 @@ export const demoSubmissions: SeedSubmission[] = [
     ],
   },
   {
-    submission_id: "sub-s11",
-    student_id: "s11",
+    submission_id: "sub-stu_11",
+    student_id: "stu_11",
     responses: [
       { question_id: "q1", answer: "x = -11", work_shown: "x = -4 - 7 = -11" },
       { question_id: "q2", answer: "x = -5", work_shown: "2x = -10; x = -5" },
@@ -278,8 +278,8 @@ export const demoSubmissions: SeedSubmission[] = [
     ],
   },
   {
-    submission_id: "sub-s12",
-    student_id: "s12",
+    submission_id: "sub-stu_12",
+    student_id: "stu_12",
     responses: [
       { question_id: "q1", answer: "x = -11", work_shown: "x = -4 - 7 = -11" },
       { question_id: "q2", answer: "x = -5", work_shown: "2x + 4 = -6; x = -5" },
@@ -296,8 +296,8 @@ export const demoSubmissions: SeedSubmission[] = [
   },
   // --- Summit (extension holds) ------------------------------------------
   {
-    submission_id: "sub-s13",
-    student_id: "s13",
+    submission_id: "sub-stu_13",
+    student_id: "stu_13",
     responses: [
       { question_id: "q1", answer: "x = -11", work_shown: "x = -4 - 7 = -11" },
       { question_id: "q2", answer: "x = -5", work_shown: "2x + 4 = -6; x = -5" },
@@ -308,8 +308,8 @@ export const demoSubmissions: SeedSubmission[] = [
     ],
   },
   {
-    submission_id: "sub-s14",
-    student_id: "s14",
+    submission_id: "sub-stu_14",
+    student_id: "stu_14",
     responses: [
       { question_id: "q1", answer: "x = -11", work_shown: "x = -4 - 7 = -11" },
       { question_id: "q2", answer: "x = -5", work_shown: "2x + 4 = -6; x = -5" },
@@ -320,8 +320,8 @@ export const demoSubmissions: SeedSubmission[] = [
     ],
   },
   {
-    submission_id: "sub-s15",
-    student_id: "s15",
+    submission_id: "sub-stu_15",
+    student_id: "stu_15",
     responses: [
       { question_id: "q1", answer: "x = -11", work_shown: "x = -4 - 7 = -11" },
       { question_id: "q2", answer: "x = -5", work_shown: "2x + 4 = -6; x = -5" },

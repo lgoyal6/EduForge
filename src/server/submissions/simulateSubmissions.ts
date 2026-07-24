@@ -88,6 +88,7 @@ export function simulateSubmissions(runId: string): RunState {
   const planReview: ReviewItem = {
     review_id: "rev-final-plan",
     run_id: run.run_id,
+    agent: "lesson_planner",
     review_type: "final_plan",
     subject_id: run.run_id,
     reason: "Tomorrow's lesson plan requires professor approval before publication.",
