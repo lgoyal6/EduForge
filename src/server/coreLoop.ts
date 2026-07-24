@@ -143,6 +143,7 @@ export function createRun(request: CreateRunRequest = {}): CreateRunOutcome {
       objective_count: assignment.objectives.length,
       teaching_intent: teachingIntent,
       demo_mode: demoMode,
+      assignment,
     },
   });
   appendRunEvent(runId, uploadEvent);

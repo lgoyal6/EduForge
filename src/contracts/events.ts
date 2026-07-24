@@ -30,6 +30,10 @@ export const agentEventSchema = z.object({
 
 export type AgentEvent = z.infer<typeof agentEventSchema>;
 
+export function isAgentEvent(value: unknown): value is AgentEvent {
+  return agentEventSchema.safeParse(value).success;
+}
+
 /** Events this branch owns end to end. */
 export const coreLoopEventTypes = [
   "assignment.uploaded",

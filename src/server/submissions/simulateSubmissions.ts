@@ -8,7 +8,7 @@
  * Deterministic: re-simulating a run resets it to the seed and produces the
  * identical result.
  */
-import type { ReviewItem, RunState } from "@/contracts";
+import type { ReviewItem, RoomId, RunState } from "@/contracts";
 import { demoAnswerKey, demoSubmissions } from "@/seed/submissions";
 import { runAssessmentAgent } from "@/server/agents/assessment";
 import { runClassroomEvolutionAgent } from "@/server/agents/classroomEvolution";
@@ -41,6 +41,7 @@ export function simulateSubmissions(runId: string): RunState {
   );
   emitRunEvent(run, "assessment.completed", "assessment_agent", {
     assessment_count: assessment.result.assessments.length,
+    assessments: assessment.result.assessments,
     needs_review_count: needsReview.length,
     needs_review_students: needsReview.map((entry) => entry.student_id),
     misconception_counts: countMisconceptions(run),
@@ -56,9 +57,14 @@ export function simulateSubmissions(runId: string): RunState {
   });
 
   // 2. Classroom Evolution Agent updates mastery, scaffolding, and rooms.
+  const previousRoomByStudent = roomByStudent(run);
   const evolution = runClassroomEvolutionAgent(run);
+  const finalMoves = finalRoomMoves(run, previousRoomByStudent);
   emitRunEvent(run, "student.models.updated", "classroom_evolution_agent", {
     updated_student_count: run.students.length,
+    students: run.students,
+    rooms: run.rooms,
+    moves: finalMoves,
     mastery_deltas: evolution.result.mastery_deltas,
     scaffolding_changes: evolution.result.scaffolding_changes,
     room_changes: evolution.result.room_changes,
@@ -78,6 +84,21 @@ export function simulateSubmissions(runId: string): RunState {
   run.lesson_plan = plan.result;
   run.status = "planned";
   emitRunEvent(run, "lesson.plan.ready", "lesson_planner", {
+    lesson_plan: {
+      ...plan.result,
+      headline: plan.result.whole_class_intervention,
+      items: plan.result.timeline.map((step) => ({
+        item_id: step.step_id,
+        title: step.title,
+        room_id: step.audience === "whole_class" ? undefined : step.audience,
+        student_ids: [],
+        concept_focus: [],
+        action: step.description,
+        rationale: step.description,
+        evidence_refs: step.evidence_refs,
+        minutes: step.duration_minutes,
+      })),
+    },
     whole_class_intervention: plan.result.whole_class_intervention,
     step_count: plan.result.timeline.length,
     first_step: plan.result.timeline[0]?.title,
@@ -104,6 +125,7 @@ export function simulateSubmissions(runId: string): RunState {
     review_gate: true,
   });
   emitRunEvent(run, "approval.requested", "lesson_planner", {
+    review_queue: run.review_queue,
     gates: run.review_queue
       .filter((item) => item.status === "pending")
       .map((item) => ({
@@ -134,4 +156,27 @@ function averageScore(run: RunState): number {
   if (run.assessments.length === 0) return 0;
   const total = run.assessments.reduce((sum, assessment) => sum + assessment.score, 0);
   return Math.round((total / run.assessments.length) * 100) / 100;
+}
+
+function roomByStudent(run: RunState): Map<string, RoomId> {
+  const byStudent = new Map<string, RoomId>();
+  for (const room of run.rooms) {
+    for (const studentId of room.members) {
+      byStudent.set(studentId, room.room_id);
+    }
+  }
+  return byStudent;
+}
+
+function finalRoomMoves(
+  run: RunState,
+  previousRoomByStudent: Map<string, RoomId>,
+): Array<{ student_id: string; from_room?: RoomId; to_room: RoomId }> {
+  return run.rooms.flatMap((room) =>
+    room.members.flatMap((studentId) => {
+      const from = previousRoomByStudent.get(studentId);
+      if (from === room.room_id) return [];
+      return [{ student_id: studentId, from_room: from, to_room: room.room_id }];
+    }),
+  );
 }

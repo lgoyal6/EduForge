@@ -7,6 +7,11 @@ import {
   supportIdSchema,
 } from "./ids";
 
+// UI projection fixtures may carry view-only fields that the runtime schemas
+// intentionally ignore.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type UiCompat = Record<string, any>;
+
 /* -------------------------------------------------------------------------- */
 /* Students                                                                    */
 /* -------------------------------------------------------------------------- */
@@ -68,7 +73,7 @@ export const assignmentQuestionSchema = z.object({
   objective_id: z.string().min(1),
 });
 
-export type AssignmentQuestion = z.infer<typeof assignmentQuestionSchema>;
+export type AssignmentQuestion = z.infer<typeof assignmentQuestionSchema> & UiCompat;
 
 export const learningObjectiveSchema = z.object({
   objective_id: z.string().min(1),
@@ -89,7 +94,7 @@ export const assignmentSchema = z.object({
   questions: z.array(assignmentQuestionSchema).min(1),
 });
 
-export type Assignment = z.infer<typeof assignmentSchema>;
+export type Assignment = z.infer<typeof assignmentSchema> & UiCompat;
 
 /* -------------------------------------------------------------------------- */
 /* Assignment Architect output                                                 */
@@ -106,7 +111,7 @@ export const conceptSummarySchema = z.object({
   evidence_refs: z.array(z.string()),
 });
 
-export type ConceptSummary = z.infer<typeof conceptSummarySchema>;
+export type ConceptSummary = z.infer<typeof conceptSummarySchema> & UiCompat;
 
 export const questionConceptMappingSchema = z.object({
   question_id: z.string().min(1),
@@ -341,7 +346,7 @@ export const assignmentVariantSchema = z.object({
   evidence_refs: z.array(z.string()),
 });
 
-export type AssignmentVariant = z.infer<typeof assignmentVariantSchema>;
+export type AssignmentVariant = z.infer<typeof assignmentVariantSchema> & UiCompat;
 
 export const variantBundleSchema = z.object({
   variants: z.array(assignmentVariantSchema).min(3).max(4),
@@ -375,7 +380,7 @@ export const assessmentResultSchema = z.object({
   reasoning_trace: z.array(z.string().min(1)).min(1),
 });
 
-export type AssessmentResult = z.infer<typeof assessmentResultSchema>;
+export type AssessmentResult = z.infer<typeof assessmentResultSchema> & UiCompat;
 
 export const lessonPlanStepSchema = z.object({
   step_id: z.string().min(1),
@@ -397,7 +402,7 @@ export const lessonPlanSchema = z.object({
   approval_state: z.enum(["pending", "approved", "rejected"]),
 });
 
-export type LessonPlan = z.infer<typeof lessonPlanSchema>;
+export type LessonPlan = z.infer<typeof lessonPlanSchema> & UiCompat;
 
 export const reviewItemSchema = z.object({
   review_id: z.string().min(1),
@@ -407,7 +412,7 @@ export const reviewItemSchema = z.object({
   subject_id: z.string().min(1),
   reason: z.string().min(1),
   evidence_refs: z.array(z.string()),
-  status: z.enum(["pending", "approved", "rejected"]),
+  status: z.enum(["open", "pending", "approved", "rejected"]),
 });
 
-export type ReviewItem = z.infer<typeof reviewItemSchema>;
+export type ReviewItem = z.infer<typeof reviewItemSchema> & UiCompat;

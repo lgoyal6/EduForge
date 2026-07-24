@@ -129,13 +129,8 @@ export function runStudentMemory(
   ctx.emit("student.context.ready", AGENT, {
     student_count: contexts.length,
     concept_coverage: bundle.concept_coverage,
-    students: contexts.map((c) => ({
-      student_id: c.student_id,
-      display_name: c.display_name,
-      mean_mastery: c.mean_mastery,
-      weighted_gap: c.weighted_gap,
-      active_misconception_count: c.active_misconceptions.length,
-    })),
+    students,
+    student_contexts: contexts,
     low_confidence_students: lowConfidenceStudents.map((c) => c.student_id),
     confidence: result.confidence,
   });

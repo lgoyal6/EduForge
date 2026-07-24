@@ -50,6 +50,8 @@ export type RunState = z.infer<typeof runStateSchema>;
 
 export const createRunRequestSchema = z.object({
   assignment_id: z.string().min(1).optional(),
+  assignment_text: z.string().optional(),
+  title: z.string().optional(),
   teaching_intent: z.string().max(500).optional(),
   demo_mode: z.boolean().optional(),
   /** Raw upload payload. Ignored in demo mode. */
@@ -57,3 +59,10 @@ export const createRunRequestSchema = z.object({
 });
 
 export type CreateRunRequest = z.infer<typeof createRunRequestSchema>;
+
+export type CreateRunResponse = {
+  run_id: string;
+  status?: RunStatus;
+  state?: RunState;
+  agent_results?: unknown;
+};

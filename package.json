@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest"
+    "test": "vitest",
+    "verify:world": "node scripts/verify-world.mjs"
   },
   "dependencies": {
     "next": "^16.2.11",
@@ -22,6 +23,7 @@
     "@types/react-dom": "^19.2.3",
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.2.11",
+    "playwright": "1.49",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10"
   }

@@ -6,6 +6,10 @@ import { listRuns } from "@/server/runStore";
 
 export const dynamic = "force-dynamic";
 
+export async function OPTIONS() {
+  return new Response(null, { status: 204 });
+}
+
 /**
  * POST /api/runs
  *

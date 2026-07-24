@@ -1,12 +1,23 @@
-import type { Metadata } from "next";
-import type { ReactNode } from "react";
+import type { Metadata, Viewport } from "next";
+import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "EduForge",
-  description: "Self-evolving classroom intelligence system",
+  title: "EduForge — self-evolving classroom",
+  description:
+    "A multi-agent classroom intelligence system shown as a living isometric school.",
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#0d1226",
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
       <body>{children}</body>
