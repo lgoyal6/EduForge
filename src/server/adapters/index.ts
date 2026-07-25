@@ -3,9 +3,9 @@
  * live implementation directly.
  *
  * Mode resolution: SPONSOR_MODE=mock (default) always yields mocks. In live
- * mode an adapter is only "live" when its keys are present — and since no
- * live implementations ship yet, live requests fall back to mocks with a
- * one-time warning instead of breaking the demo.
+ * mode an adapter is "live" only when its keys are present. Band ships a real
+ * live implementation (band.ai); the others still fall back to their mock with
+ * a one-time warning instead of breaking the demo.
  */
 import {
   adapterNames,
@@ -16,24 +16,39 @@ import {
   type SponsorMode,
 } from "@/server/config";
 import { createMockActianAdapter, resetMockActian } from "./actianMock";
+import { createLiveBandAdapter } from "./bandLive";
 import { createMockBandAdapter, resetMockBand } from "./bandMock";
 import { createMockGuildAdapter, resetMockGuild } from "./guildMock";
 import { createMockModelAdapter, resetMockModel } from "./modelMock";
 import { createMockReplayAdapter } from "./replayMock";
-import type { SponsorAdapters } from "./types";
+import type { BandAdapter, SponsorAdapters } from "./types";
 
 const GLOBAL_KEY = "__eduforge_adapters__";
 
+function buildBandAdapter(): BandAdapter {
+  const config = getEnvConfig();
+  if (resolveAdapterMode("band", config) === "live") {
+    // hasRequiredKeys("band") already guaranteed by resolveAdapterMode === "live".
+    return createLiveBandAdapter({
+      restUrl: config.bandRestUrl,
+      wsUrl: config.bandWsUrl,
+      agentId: config.bandAgentId as string,
+      apiKey: config.bandApiKey as string,
+    });
+  }
+  return createMockBandAdapter();
+}
+
 function buildAdapters(): SponsorAdapters {
-  // Live implementations are not built for the hackathon; resolveAdapterMode
-  // still decides (and warns) so swapping in a live adapter later is a
+  // Non-Band live implementations are not built for the hackathon;
+  // resolveAdapterMode still decides (and warns) so swapping one in later is a
   // one-line change per sponsor.
   for (const name of adapterNames) {
     resolveAdapterMode(name);
   }
   return {
     guild: createMockGuildAdapter(),
-    band: createMockBandAdapter(),
+    band: buildBandAdapter(),
     actian: createMockActianAdapter(),
     model: createMockModelAdapter(),
     replay: createMockReplayAdapter(),

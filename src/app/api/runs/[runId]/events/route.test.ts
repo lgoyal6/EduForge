@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AgentEvent } from "@/contracts";
+import { resetAdapters } from "@/server/adapters";
 import { resetAuditLog } from "@/server/audit";
 import { emitEvent, getRunEvents, getSubscriberCount, resetEventBus } from "@/server/events";
 import { GET, POST } from "./route";
@@ -129,11 +130,17 @@ describe("POST /api/runs/:runId/events", () => {
   beforeEach(() => {
     resetEventBus();
     resetAuditLog();
+    resetAdapters();
     vi.stubEnv("SPONSOR_MODE", "");
+    // Keep Band in mock mode so injection tests never touch the network,
+    // regardless of any BAND_* vars in the developer's ambient environment.
+    vi.stubEnv("BAND_API_KEY", "");
+    vi.stubEnv("BAND_AGENT_ID", "");
   });
 
   afterEach(() => {
     vi.unstubAllEnvs();
+    resetAdapters();
   });
 
   it("injects a validated event in mock mode", async () => {
@@ -164,8 +171,11 @@ describe("POST /api/runs/:runId/events", () => {
     expect(getRunEvents(RUN)).toHaveLength(0);
   });
 
-  it("is disabled outside mock mode", async () => {
+  it("injects in live mode too, emitting through the Band adapter", async () => {
+    // Live SPONSOR_MODE but no Band keys → the adapter safely falls back to the
+    // Band mock (local bus), so injection succeeds with no network dependency.
     vi.stubEnv("SPONSOR_MODE", "live");
+    resetAdapters();
     const request = new Request(`http://localhost/api/runs/${RUN}/events`, {
       method: "POST",
       body: JSON.stringify({
@@ -175,6 +185,7 @@ describe("POST /api/runs/:runId/events", () => {
     });
 
     const response = await POST(request, makeContext(RUN));
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(201);
+    expect(getRunEvents(RUN)).toHaveLength(1);
   });
 });
