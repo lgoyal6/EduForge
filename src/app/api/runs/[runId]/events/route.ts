@@ -2,14 +2,16 @@
  * GET  /api/runs/:runId/events — SSE stream of agent events for a run.
  *      Replays full history, then streams live events. Send
  *      Accept: application/json (or ?format=json) for a plain history array.
- * POST /api/runs/:runId/events — mock-mode-only event injector so the
- *      frontend can drive animations before the agent loop is merged.
+ * POST /api/runs/:runId/events — event injector so the frontend can drive
+ *      animations before the agent loop is merged. Emits through the Band
+ *      adapter, so in live mode every injected event is also mirrored into the
+ *      run's real Band room (band.ai); in mock mode it stays on the local bus.
  */
 import { z } from "zod";
 import { agentNames, eventTypes, type AgentEvent } from "@/contracts";
+import { getAdapters } from "@/server/adapters";
 import { recordAudit } from "@/server/audit";
-import { getEnvConfig } from "@/server/config";
-import { emitEvent, getRunEvents, subscribeToRun } from "@/server/events";
+import { getRunEvents, subscribeToRun } from "@/server/events";
 
 export const dynamic = "force-dynamic";
 
@@ -97,13 +99,6 @@ const injectEventSchema = z.object({
 });
 
 export async function POST(request: Request, context: RouteContext): Promise<Response> {
-  if (getEnvConfig().sponsorMode !== "mock") {
-    return Response.json(
-      { error: "Event injection is only available when SPONSOR_MODE=mock." },
-      { status: 403 },
-    );
-  }
-
   const { runId } = await context.params;
   const parsed = injectEventSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
@@ -113,7 +108,9 @@ export async function POST(request: Request, context: RouteContext): Promise<Res
     );
   }
 
-  const event = emitEvent({
+  // Emit through the Band adapter (not the raw bus) so live mode mirrors the
+  // event into the run's Band room; mock mode behaves exactly as before.
+  const event = getAdapters().band.emit({
     run_id: runId,
     event_type: parsed.data.event_type,
     source_agent: parsed.data.source_agent,

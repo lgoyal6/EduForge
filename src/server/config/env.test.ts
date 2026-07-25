@@ -9,6 +9,7 @@ const ENV_KEYS = [
   "ACTIAN_API_KEY",
   "GUILD_API_KEY",
   "BAND_API_KEY",
+  "BAND_AGENT_ID",
   "REPLAY_API_KEY",
 ];
 
@@ -56,7 +57,12 @@ describe("env config", () => {
 
   it("resolves live only when required keys are present", () => {
     vi.stubEnv("SPONSOR_MODE", "live");
+
+    // band needs both the API key and the remote-agent id
     vi.stubEnv("BAND_API_KEY", "band-key");
+    expect(hasRequiredKeys("band")).toBe(false);
+    vi.stubEnv("BAND_AGENT_ID", "agent-uuid");
+    expect(hasRequiredKeys("band")).toBe(true);
     expect(resolveAdapterMode("band")).toBe("live");
 
     // actian needs both url and key
@@ -64,6 +70,12 @@ describe("env config", () => {
     expect(hasRequiredKeys("actian")).toBe(false);
     vi.stubEnv("ACTIAN_API_KEY", "actian-key");
     expect(hasRequiredKeys("actian")).toBe(true);
+  });
+
+  it("provides Band platform URL defaults, overridable via env", () => {
+    expect(getEnvConfig().bandRestUrl).toBe("https://app.band.ai");
+    vi.stubEnv("BAND_WS_URL", "wss://band.internal/api/v1/socket/websocket");
+    expect(getEnvConfig().bandWsUrl).toBe("wss://band.internal/api/v1/socket/websocket");
   });
 
   it("model adapter needs a non-mock provider and a key for live mode", () => {

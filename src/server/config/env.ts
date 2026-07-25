@@ -21,8 +21,15 @@ export type EnvConfig = {
   actianApiKey: string | null;
   guildApiKey: string | null;
   bandApiKey: string | null;
+  bandAgentId: string | null;
+  bandRestUrl: string;
+  bandWsUrl: string;
   replayApiKey: string | null;
 };
+
+/** Band platform defaults (band.ai hosted). Overridable for self-hosted/VPC. */
+const BAND_DEFAULT_REST_URL = "https://app.band.ai";
+const BAND_DEFAULT_WS_URL = "wss://app.band.ai/api/v1/socket/websocket";
 
 function readOptional(name: string): string | null {
   const value = process.env[name]?.trim();
@@ -39,13 +46,16 @@ export function getEnvConfig(): EnvConfig {
     actianApiKey: readOptional("ACTIAN_API_KEY"),
     guildApiKey: readOptional("GUILD_API_KEY"),
     bandApiKey: readOptional("BAND_API_KEY"),
+    bandAgentId: readOptional("BAND_AGENT_ID"),
+    bandRestUrl: readOptional("BAND_REST_URL") ?? BAND_DEFAULT_REST_URL,
+    bandWsUrl: readOptional("BAND_WS_URL") ?? BAND_DEFAULT_WS_URL,
     replayApiKey: readOptional("REPLAY_API_KEY"),
   };
 }
 
 const keyRequirements: Record<AdapterName, (config: EnvConfig) => boolean> = {
   guild: (config) => config.guildApiKey !== null,
-  band: (config) => config.bandApiKey !== null,
+  band: (config) => config.bandApiKey !== null && config.bandAgentId !== null,
   actian: (config) => config.actianUrl !== null && config.actianApiKey !== null,
   model: (config) => config.modelProvider !== "mock" && config.modelApiKey !== null,
   replay: (config) => config.replayApiKey !== null,
