@@ -110,12 +110,18 @@ export class BandRestClient {
   }
 
   /** GET /api/v1/agent/me — confirms the credential and returns the agent profile. */
-  async getIdentity(): Promise<{ id: string; name?: string; handle?: string }> {
-    const res = await this.request<{ data: { id: string; name?: string; handle?: string } }>(
-      "GET",
-      "/api/v1/agent/me",
-    );
+  async getIdentity(): Promise<{ id: string; name?: string; handle?: string; owner_uuid?: string }> {
+    const res = await this.request<{
+      data: { id: string; name?: string; handle?: string; owner_uuid?: string };
+    }>("GET", "/api/v1/agent/me");
     return res.data;
+  }
+
+  /** POST /api/v1/agent/chats/{id}/participants — add a user/agent to the room. */
+  async addParticipant(chatId: string, participantId: string, role = "member"): Promise<void> {
+    await this.request("POST", `/api/v1/agent/chats/${chatId}/participants`, {
+      participant: { participant_id: participantId, role },
+    });
   }
 
   /** POST /api/v1/agent/chats — create a room. Owner is auto-set to this agent. */

@@ -50,9 +50,10 @@ export function createLiveBandAdapter(config: BandClientConfig): BandAdapter {
     console.warn(`[band] ${key} failed; continuing on the local bus. Cause:`, error);
   }
 
-  // Log the connected identity once so demos can show "Connected to Band as X".
-  rest
-    .getIdentity()
+  // Resolve identity once: logs the connection and yields the human owner id so
+  // rooms can be shared into their Band console.
+  const identity = rest.getIdentity();
+  identity
     .then((me) => console.info(`[band] live mode: connected as ${me.name ?? me.handle ?? me.id}`))
     .catch((error) => warnOnce("identity", error));
 
@@ -63,8 +64,14 @@ export function createLiveBandAdapter(config: BandClientConfig): BandAdapter {
     if (inFlight) return inFlight;
     const created = rest
       .createChat(`EduForge · run ${runId}`)
-      .then((roomId) => {
+      .then(async (roomId) => {
         roomByRun.set(runId, roomId);
+        // Agent-owned rooms are hidden from the human owner until they're a
+        // participant — add them so the run is visible in their Band console.
+        const me = await identity.catch(() => null);
+        if (me?.owner_uuid) {
+          await rest.addParticipant(roomId, me.owner_uuid).catch((error) => warnOnce("participant", error));
+        }
         return roomId;
       })
       .finally(() => roomInFlight.delete(runId));
