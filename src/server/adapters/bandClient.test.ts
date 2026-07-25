@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AgentEvent } from "@/contracts";
-import { decodeEventContent, encodeEventContent } from "./bandClient";
+import { encodeEventContent } from "./bandClient";
 
 const event: AgentEvent = {
   event_id: "evt_0001",
@@ -11,19 +11,16 @@ const event: AgentEvent = {
   payload: { concepts: ["integer_operations"], count: 1 },
 };
 
-describe("band wire format", () => {
-  it("round-trips an event through message content", () => {
+describe("encodeEventContent", () => {
+  it("renders a readable agent → event line with a compact payload preview", () => {
     const content = encodeEventContent(event);
-    // Human-readable summary leads the content for the Band room UI.
-    expect(content.startsWith("assignment_architect → assignment.concepts.extracted")).toBe(true);
-    expect(decodeEventContent(content)).toEqual(event);
+    expect(content).toContain("assignment_architect → assignment.concepts.extracted");
+    expect(content).toContain("concepts: [1]"); // arrays shown as [length]
+    expect(content).toContain("count: 1");
   });
 
-  it("returns null for external (non-EduForge) messages", () => {
-    expect(decodeEventContent("Looks good — approved!")).toBeNull();
-  });
-
-  it("returns null for a marked-but-corrupt envelope instead of throwing", () => {
-    expect(decodeEventContent("summary\n\n⟦eduforge-event⟧{not json")).toBeNull();
+  it("omits the preview when there is no payload", () => {
+    const content = encodeEventContent({ ...event, payload: {} });
+    expect(content).toBe("assignment_architect → assignment.concepts.extracted");
   });
 });

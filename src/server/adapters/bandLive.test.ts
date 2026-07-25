@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetEventBus } from "@/server/events";
 import { createLiveBandAdapter } from "./bandLive";
-import { decodeEventContent } from "./bandClient";
 
 const CONFIG = {
   restUrl: "https://app.band.ai",
@@ -10,9 +9,11 @@ const CONFIG = {
   apiKey: "band-key",
 };
 
+const OWNER = "owner-uuid";
+
 type Call = { url: string; method: string; headers: Record<string, string>; body: unknown };
 
-function installFetchMock(): { calls: Call[]; fail?: () => void } {
+function installFetchMock(): { calls: Call[] } {
   const calls: Call[] = [];
   const impl = vi.fn(async (url: string, init: RequestInit = {}) => {
     calls.push({
@@ -22,13 +23,16 @@ function installFetchMock(): { calls: Call[]; fail?: () => void } {
       body: init.body ? JSON.parse(init.body as string) : undefined,
     });
     if (url.endsWith("/api/v1/agent/me")) {
-      return Response.json({ data: { id: "agent-uuid", name: "EduForge Bot" } });
+      return Response.json({ data: { id: "agent-uuid", name: "eduforge", owner_uuid: OWNER } });
     }
     if (url.endsWith("/api/v1/agent/chats")) {
       return Response.json({ data: { id: "room-123", title: null } }, { status: 201 });
     }
-    if (url.endsWith("/events")) {
-      return Response.json({ data: { id: "evt-1", success: true, message_type: "thought" } }, { status: 201 });
+    if (url.endsWith("/participants")) {
+      return Response.json({ data: { id: OWNER, role: "member" } }, { status: 201 });
+    }
+    if (url.endsWith("/messages")) {
+      return Response.json({ data: { id: "msg-1", success: true } }, { status: 201 });
     }
     return new Response("not found", { status: 404 });
   });
@@ -46,14 +50,15 @@ afterEach(() => {
 });
 
 describe("live band adapter (fetch-mocked)", () => {
-  it("creates a room and posts the encoded event with the API key header", async () => {
+  it("creates a room, adds the owner, and posts a readable message mentioning them", async () => {
     const { calls } = installFetchMock();
     const band = createLiveBandAdapter(CONFIG);
 
     const event = band.emit({
       run_id: "run_live",
-      event_type: "assignment.uploaded",
-      source_agent: "assignment_architect",
+      event_type: "groups.proposed",
+      source_agent: "grouping_agent",
+      payload: { rooms: 4 },
     });
 
     // emit is synchronous: the envelope is returned and on the local bus immediately.
@@ -62,19 +67,23 @@ describe("live band adapter (fetch-mocked)", () => {
 
     // the Band round-trip happens asynchronously in the background.
     await vi.waitFor(() => {
-      const post = calls.find((c) => c.url.endsWith("/events"));
-      expect(post).toBeDefined();
+      expect(calls.find((c) => c.url.endsWith("/messages"))).toBeDefined();
     });
 
     const createRoom = calls.find((c) => c.method === "POST" && c.url.endsWith("/api/v1/agent/chats"));
     expect(createRoom?.body).toEqual({ chat: { title: "EduForge · run run_live" } });
 
-    const post = calls.find((c) => c.url.endsWith("/events"))!;
-    expect(post.url).toBe("https://app.band.ai/api/v1/agent/chats/room-123/events");
+    // owner is added as a participant so the room shows in their console
+    const addParticipant = calls.find((c) => c.url.endsWith("/participants"));
+    expect(addParticipant?.body).toEqual({ participant: { participant_id: OWNER, role: "member" } });
+
+    const post = calls.find((c) => c.url.endsWith("/messages"))!;
+    expect(post.url).toBe("https://app.band.ai/api/v1/agent/chats/room-123/messages");
     expect(post.headers["X-API-Key"]).toBe("band-key");
-    const body = post.body as { event: { content: string; message_type: string } };
-    expect(body.event.message_type).toBe("thought");
-    expect(decodeEventContent(body.event.content)).toEqual(event);
+    const body = post.body as { message: { content: string; mentions: { id: string }[] } };
+    expect(body.message.mentions).toEqual([{ id: OWNER }]);
+    expect(body.message.content).toContain("grouping_agent → groups.proposed");
+    expect(body.message.content).toContain("rooms: 4");
   });
 
   it("reuses a single room across events in the same run", async () => {
@@ -85,7 +94,7 @@ describe("live band adapter (fetch-mocked)", () => {
     band.emit({ run_id: "run_x", event_type: "groups.proposed", source_agent: "grouping_agent" });
 
     await vi.waitFor(() => {
-      expect(calls.filter((c) => c.url.endsWith("/events"))).toHaveLength(2);
+      expect(calls.filter((c) => c.url.endsWith("/messages"))).toHaveLength(2);
     });
     expect(calls.filter((c) => c.method === "POST" && c.url.endsWith("/api/v1/agent/chats"))).toHaveLength(1);
   });

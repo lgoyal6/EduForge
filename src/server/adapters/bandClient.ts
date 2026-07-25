@@ -12,7 +12,6 @@
  * the official Python SDK (thenvoi/thenvoi-sdk-python).
  */
 import type { AgentEvent } from "@/contracts";
-import { agentEventSchema } from "@/contracts";
 
 export type BandClientConfig = {
   restUrl: string; // e.g. https://app.band.ai
@@ -54,34 +53,27 @@ export type BandChatMessage = {
 // Wire format: EduForge AgentEvent <-> Band message content
 // ---------------------------------------------------------------------------
 
-/**
- * Marker separating the human-readable summary from the machine-readable
- * envelope inside a Band message's `content`. A message without the marker is
- * treated as external (e.g. a professor typing in the room) and is not an
- * EduForge event.
- */
-const ENVELOPE_MARKER = "\n\n⟦eduforge-event⟧";
-
-/** Encode an EduForge event as Band message content: a readable line + the envelope. */
-export function encodeEventContent(event: AgentEvent): string {
-  const summary = `${event.source_agent} → ${event.event_type}`;
-  return `${summary}${ENVELOPE_MARKER}${JSON.stringify(event)}`;
+/** Compact, safe preview of a single payload value for the message line. */
+function previewValue(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.length}]`;
+  if (value && typeof value === "object") return "{…}";
+  return String(value).slice(0, 40);
 }
 
 /**
- * Recover an EduForge event from Band message content, or null when the message
- * did not originate from EduForge (no marker) or fails contract validation.
+ * Render an EduForge event as a human-readable Band message line, e.g.
+ * "grouping_agent → groups.proposed · rooms: 4". Readable is the goal: Band's
+ * room UI shows messages as chat, so the demo reads as an agent conversation.
  */
-export function decodeEventContent(content: string): AgentEvent | null {
-  const index = content.indexOf(ENVELOPE_MARKER);
-  if (index === -1) return null;
-  const json = content.slice(index + ENVELOPE_MARKER.length);
-  try {
-    const parsed = agentEventSchema.safeParse(JSON.parse(json));
-    return parsed.success ? parsed.data : null;
-  } catch {
-    return null;
-  }
+export function encodeEventContent(event: AgentEvent): string {
+  const summary = `${event.source_agent} → ${event.event_type}`;
+  const keys = Object.keys(event.payload ?? {});
+  if (keys.length === 0) return summary;
+  const preview = keys
+    .slice(0, 3)
+    .map((key) => `${key}: ${previewValue((event.payload as Record<string, unknown>)[key])}`)
+    .join(", ");
+  return `${summary} · ${preview}`;
 }
 
 // ---------------------------------------------------------------------------
@@ -133,12 +125,24 @@ export class BandRestClient {
   }
 
   /**
-   * POST /api/v1/agent/chats/{id}/events — post an activity event.
-   *
-   * Events (not messages) are the right primitive here: they "report what
-   * happened rather than directing messages at participants", so they need no
-   * @mention. A message requires mentioning another participant (self-mention
-   * is rejected), which a solo broadcasting agent has no one to do.
+   * POST /api/v1/agent/chats/{id}/messages — post a chat message mentioning a
+   * participant. Messages (unlike events) render as chat bubbles in Band's room
+   * UI, so this is what makes a run visible. A message requires ≥1 mention and
+   * self-mention is rejected, so we mention the human owner (a participant).
+   */
+  async sendMessage(chatId: string, content: string, mentionId: string): Promise<{ id: string }> {
+    const res = await this.request<{ data: { id: string } }>(
+      "POST",
+      `/api/v1/agent/chats/${chatId}/messages`,
+      { message: { content, mentions: [{ id: mentionId }] } },
+    );
+    return res.data;
+  }
+
+  /**
+   * POST /api/v1/agent/chats/{id}/events — post an activity event (no mention
+   * required). Fallback for when no participant is available to mention; note
+   * events are hidden from Band's default room view, unlike messages.
    */
   async postEvent(
     chatId: string,

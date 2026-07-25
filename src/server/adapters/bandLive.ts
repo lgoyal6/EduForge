@@ -3,10 +3,11 @@
  *
  * The local event bus stays the synchronous source of truth (so the SSE route,
  * the UI, and every existing test keep working). On top of that, this adapter:
- *   - creates one real Band room per run (lazily, deduped),
- *   - mirrors every emitted event into that room via Band's REST API,
- *   - opens Band's WebSocket to ingest events posted by other participants and
- *     re-emits them locally (deduped against our own echoes).
+ *   - creates one real Band room per run (lazily, deduped) and adds the human
+ *     owner as a participant so the run is visible in their Band console,
+ *   - mirrors every emitted event into that room as a readable chat message
+ *     (mentioning the owner, which is what renders in Band's room UI),
+ *   - opens Band's WebSocket for live inbound room messages (best-effort).
  *
  * Every Band call is best-effort: a failure warns once and the local bus keeps
  * the demo running, matching the mock's "never break the demo" contract.
@@ -24,7 +25,6 @@ import {
 import {
   BandRestClient,
   BandRoomSubscription,
-  decodeEventContent,
   encodeEventContent,
   type BandClientConfig,
 } from "./bandClient";
@@ -39,9 +39,6 @@ export function createLiveBandAdapter(config: BandClientConfig): BandAdapter {
   const roomInFlight = new Map<string, Promise<string>>();
   const postTail = new Map<string, Promise<void>>();
   const liveSubs = new Map<string, LiveSub>();
-  // event_ids we've already accounted for locally — prevents Band's echo of our
-  // own posts from being re-published a second time on the inbound WS stream.
-  const seen = new Set<string>();
   const warned = new Set<string>();
 
   function warnOnce(key: string, error: unknown): void {
@@ -81,11 +78,18 @@ export function createLiveBandAdapter(config: BandClientConfig): BandAdapter {
 
   /** Post one event to its run's Band room, serialized per run to preserve order. */
   function mirror(event: AgentEvent): void {
-    seen.add(event.event_id);
     const tail = (postTail.get(event.run_id) ?? Promise.resolve())
       .then(async () => {
         const roomId = await ensureRoom(event.run_id);
-        await rest.postEvent(roomId, encodeEventContent(event));
+        const me = await identity.catch(() => null);
+        const content = encodeEventContent(event);
+        // Prefer a visible chat message mentioning the human owner; fall back to
+        // an activity event when no owner is available to mention.
+        if (me?.owner_uuid) {
+          await rest.sendMessage(roomId, content, me.owner_uuid);
+        } else {
+          await rest.postEvent(roomId, content);
+        }
       })
       .catch((error) => warnOnce("publish", error));
     postTail.set(event.run_id, tail);
@@ -103,13 +107,10 @@ export function createLiveBandAdapter(config: BandClientConfig): BandAdapter {
     void ensureRoom(runId)
       .then((roomId) =>
         BandRoomSubscription.open(config, roomId, (message) => {
-          const event = decodeEventContent(message.content);
-          // Re-emit only genuinely new EduForge events (from another instance or
-          // agent) — never our own echoed posts.
-          if (event && !seen.has(event.event_id)) {
-            seen.add(event.event_id);
-            publishEvent(event);
-          }
+          // Best-effort liveness: surface inbound room activity (e.g. a
+          // professor typing in the Band room). Proves the bidirectional link.
+          const who = message.sender_name ?? message.sender_id;
+          console.info(`[band] inbound in ${runId} from ${who}: ${(message.content ?? "").slice(0, 80)}`);
         }),
       )
       .then((sub) => {

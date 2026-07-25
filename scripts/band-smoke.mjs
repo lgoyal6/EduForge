@@ -24,8 +24,13 @@ if (!apiKey || !agentId) {
   process.exit(1);
 }
 
-const MARKER = "\n\n⟦eduforge-event⟧";
-const encode = (event) => `${event.source_agent} → ${event.event_type}${MARKER}${JSON.stringify(event)}`;
+const preview = (v) => (Array.isArray(v) ? `[${v.length}]` : v && typeof v === "object" ? "{…}" : String(v).slice(0, 40));
+const encode = (event) => {
+  const summary = `${event.source_agent} → ${event.event_type}`;
+  const keys = Object.keys(event.payload ?? {});
+  if (!keys.length) return summary;
+  return `${summary} · ${keys.slice(0, 3).map((k) => `${k}: ${preview(event.payload[k])}`).join(", ")}`;
+};
 
 async function api(method, path, body) {
   const res = await fetch(`${restUrl}${path}`, {
@@ -79,8 +84,8 @@ try {
       payload: {},
       ...partial,
     };
-    await api("POST", `/api/v1/agent/chats/${roomId}/events`, {
-      event: { content: encode(event), message_type: "thought" },
+    await api("POST", `/api/v1/agent/chats/${roomId}/messages`, {
+      message: { content: encode(event), mentions: [{ id: identity.owner_uuid }] },
     });
     console.log(`  → posted ${event.source_agent} / ${event.event_type}`);
   }
