@@ -62,6 +62,15 @@ try {
   const roomId = created.data.id;
   console.log(`✓ Created Band room: ${roomId}`);
 
+  // Add the human owner so the room shows up in your Band console (agent-owned
+  // rooms are hidden from your login until you're a participant).
+  if (identity.owner_uuid) {
+    await api("POST", `/api/v1/agent/chats/${roomId}/participants`, {
+      participant: { participant_id: identity.owner_uuid },
+    });
+    console.log("✓ Added you (owner) to the room — it will appear in your console");
+  }
+
   for (const partial of sampleEvents) {
     const event = {
       event_id: `evt_${sampleEvents.indexOf(partial) + 1}`,
