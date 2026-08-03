@@ -24,7 +24,7 @@
     "eslint": "^9.39.5",
     "eslint-config-next": "^16.2.11",
     "playwright": "1.49",
-    "typescript": "^6.0.3",
+    "typescript": "^7.0.2",
     "vitest": "^4.1.10"
   }
 }
