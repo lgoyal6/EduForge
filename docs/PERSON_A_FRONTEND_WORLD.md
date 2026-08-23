@@ -161,31 +161,31 @@ after each event:
 | `lesson.plan.ready` | Translucent tomorrow overlay washes the campus; plan badge over the Observatory. |
 | `approval.requested` | Beacon pulses and the professor review panel opens. |
 
-**Panels** (`src/components/panels/**`) — student, room, agent event, lesson
+**Panels** (`src/components/panels/**`) - student, room, agent event, lesson
 plan item, and per-building detail views; the assignment morph panel with the
 Original / Room Version / Student Layer segmented toggle, objective-preservation
 badge, and adaptation explanation; and the agent feed with clickable structured
 payloads that link back to the students and rooms they mention.
 
-**Controls** (`src/components/demo/**`) — upload (file or paste), teaching
+**Controls** (`src/components/demo/**`) - upload (file or paste), teaching
 intent, Start run, Run classroom simulation, Skip animation, Reset demo, and a
 1x/2x/4x replay speed control.
 
-**Transport** (`src/world/source.ts`, `src/world/api.ts`) — `createMockReplay`
+**Transport** (`src/world/source.ts`, `src/world/api.ts`) - `createMockReplay`
 and `createSseSource` satisfy one `RunSource` interface and emit the identical
 `AgentEvent` shape. The app probes `/api/runs` once at startup, uses the live
 API and SSE when it answers, and silently falls back to mock replay when it does
 not. `src/world/runState.ts` projects the event stream into panel state, so mock
 and live produce the same UI by construction.
 
-**Automation hooks** — `window.render_game_to_text()` returns a deterministic
+**Automation hooks** - `window.render_game_to_text()` returns a deterministic
 text description of the whole world, and `window.advanceTime(ms)` steps the
 fixed-timestep clock without waiting on `requestAnimationFrame`. Both are
 verified in a real browser by `npm run verify:world`.
 
 ### What was intentionally mocked
 
-- `src/world/mock/**` — the frozen demo fixture (1 assignment, 4 concepts, 12
+- `src/world/mock/**` - the frozen demo fixture (1 assignment, 4 concepts, 12
   students, 4 rooms, 4 variants, 12 assessments, 3 regrouping moves, a 5-item
   lesson plan, and 1 low-confidence review item). This is Person A's replay
   data, deliberately separate from Person B's `src/seed`.
@@ -208,7 +208,7 @@ verified in a real browser by `npm run verify:world`.
    the inner object.
 3. **Backend probe uses `OPTIONS /api/runs`.** A backend that answers `OPTIONS`
    with 404 while implementing `POST` would be misdetected as absent. The app
-   still works — it replays mock — but it would not use the real API. One
+   still works - it replays mock - but it would not use the real API. One
    console 404 at startup is expected and is exactly this probe.
 4. **Live pacing.** Events are gated to one every 0.45s so animations stay
    legible. If the backend emits all eleven events in under a second, the world
@@ -252,13 +252,13 @@ another owner's work; all of it is new:
 - `package.json`, `tsconfig.json`, `next.config.mjs`, `.eslintrc.json`,
   `.gitignore`, `vitest.config.ts`
 - `src/app/layout.tsx`, `src/app/globals.css`, `src/app/icon.svg`
-- `src/contracts/index.ts` — transcribed from `docs/CONTRACTS.md` verbatim, with
+- `src/contracts/index.ts` - transcribed from `docs/CONTRACTS.md` verbatim, with
   the referenced-but-unspecified types (`SupportId`, `MisconceptionId`,
   `RoomId`, `Assignment`, `ConceptSummary`, `AssignmentVariant`,
   `AssessmentResult`, `LessonPlan`, `ReviewItem`) filled in. Person B/C/D should
   treat this as the frozen contract module and raise changes with the team.
-- `scripts/verify-world.mjs` — the browser check described above.
-- `README.md` — added a "Running the app" section.
+- `scripts/verify-world.mjs` - the browser check described above.
+- `README.md` - added a "Running the app" section.
 
 ---
 
@@ -271,14 +271,14 @@ in the same vocabulary as the world.
 ### References
 
 `refero_search_styles` and `mobbin.search_screens` were both searched for
-Minecraft UI. Neither library carries it — Minecraft's interface is not a
+Minecraft UI. Neither library carries it - Minecraft's interface is not a
 product-design pattern, so it is absent from screen libraries. What they did
 return was useful for the adjacent problem of game UI inside a product:
 
-- [Mercury — in-app arcade game screen](https://mobbin.com/screens/9105331f-214a-4734-a40c-7fac714ae096),
+- [Mercury - in-app arcade game screen](https://mobbin.com/screens/9105331f-214a-4734-a40c-7fac714ae096),
   the closest match: pixel type and bordered option cards sitting inside an
   otherwise conventional product shell.
-- [Relevance AI — isometric pixel room](https://mobbin.com/screens/c200f5d9-67c3-4302-94ee-86d592b7df24),
+- [Relevance AI - isometric pixel room](https://mobbin.com/screens/c200f5d9-67c3-4302-94ee-86d592b7df24),
   confirming an isometric pixel scene can anchor a working tool.
 - Refero: [FRANKY'S](https://frankys-hats.com) for 8-bit commerce chrome and
   [Playdate](https://play.date) for blocky, flat, hard-edged surfaces.
@@ -298,7 +298,7 @@ be a hue the four room colors do not already occupy. Semantic color is separate:
 **Type.** Two pixel faces, inlined as data URIs in `src/app/fonts.css` (both SIL
 OFL, latin subset, ~21 KB total): **Press Start 2P** for headings and buttons,
 **Silkscreen** for labels, counts and chips. Body prose stays in a system sans.
-That last part is the deliberate deviation — Minecraft uses one font for
+That last part is the deliberate deviation - Minecraft uses one font for
 everything, but this UI carries agent rationale and misconception narratives,
 and readability wins over purity where the content is long. The fonts are
 embedded rather than linked so a blocked CDN cannot silently fall back to a
@@ -314,7 +314,7 @@ bevel; wells invert it. Nothing has a border radius. Buttons sink their bevel on
   contract event, each with a tooltip naming what that stage does. Discrete
   cells make progress countable at a glance, and keys `1`–`9` jump to a stage.
 - **Advancement toasts.** Events that fire while you are watching the world were
-  previously only recorded in the feed, off to the side — the thing the demo most
+  previously only recorded in the feed, off to the side - the thing the demo most
   wants you to notice was the thing you were most likely to miss. Capped at two,
   anchored bottom-right (not Minecraft's top-right, because the command rail
   lives there and covering the controls is worse than being off-canon).
@@ -326,7 +326,7 @@ bevel; wells invert it. Nothing has a border radius. Buttons sink their bevel on
   classroom is available pulses gold; the other is visibly dead.
 - **Accessibility.** Real `:focus-visible` rings, `prefers-reduced-motion`
   support, `role="meter"` on mastery bars, and descriptive `aria-label`s on
-  hotbar slots — none of which existed before.
+  hotbar slots - none of which existed before.
 - `summarizeEvent` was extracted to `src/world/eventSummary.ts` so the feed and
   the toasts cannot describe the same event two different ways.
 

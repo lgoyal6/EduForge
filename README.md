@@ -122,7 +122,7 @@ Turns the updated classroom state into an evidence-backed next-day lesson timeli
 
 ## Sponsor Integrations
 
-### Guild AI — The Control Plane Behind the School
+### Guild AI - The Control Plane Behind the School
 
 Guild AI is what turns EduForge from a collection of prompts into a controlled, inspectable agent system.
 
@@ -144,7 +144,7 @@ This is especially important in education, where an AI system should never silen
 
 Guild AI gives EduForge the governance layer required for trustworthy classroom automation.
 
-### Actian — The Long-Term Memory of the Classroom
+### Actian - The Long-Term Memory of the Classroom
 
 Actian is not used as a basic grade table. It acts as EduForge's **Classroom Memory Engine**.
 
@@ -175,7 +175,7 @@ That observation can be retrieved when integer operations appear again, allowing
 
 Actian makes the classroom genuinely self-evolving because every assignment contributes to persistent, reusable learning memory.
 
-### BAND — The Communication Mesh for AI Agents
+### BAND - The Communication Mesh for AI Agents
 
 EduForge is not a rigid sequence of disconnected functions. Its agents communicate through an event-driven mesh powered by BAND.
 
@@ -213,7 +213,7 @@ In the pixel world, BAND messages appear as glowing particles moving between bui
 
 The communication layer is not hidden infrastructure. It is part of the product experience.
 
-### Replay — Reliability for a Complex Live Demo
+### Replay - Reliability for a Complex Live Demo
 
 EduForge has a difficult frontend: Phaser animations, React panels, SSE events, world-state transitions, timed choreography, assignment morphing, and student movement all need to remain synchronized.
 

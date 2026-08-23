@@ -13,7 +13,7 @@ Original prompt: Build the EduForge/TokenHack hackathon app using a four-person 
 - Create/publish the four work branches from the scaffold commit.
 - Next implementation phase should scaffold the Next.js app and contracts before feature work begins.
 
-## Person C (backend assessment & evolution) — 2026-07-24
+## Person C (backend assessment & evolution) - 2026-07-24
 
 - Implemented the full second half of the loop: prepared submissions, Assessment Agent, BKT mastery module, Classroom Evolution Agent, Lesson Planner, simulate-submissions + approve-plan routes, review queue, and audit gates. All required demo outcomes are pinned by 24 tests; lint/typecheck/test/build pass.
 - Adopted Person D's scaffold, contracts, event bus, and audit log as byte-identical copies for clean merging; run store is a local fallback until Person B's `POST /api/runs` lands.
